@@ -18,7 +18,7 @@ public class BankCardDto {
   @Digits(
       integer = 16,
       fraction = 0,
-      message = "The number must be an integer and consist of 16 digits")
+      message = "{card.number.validation.error}")
   @NotNull
   private Long cardNumber;
 

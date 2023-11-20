@@ -1,6 +1,7 @@
 package com.modsen.driverservice.controller;
 
 import com.modsen.driverservice.dto.DriverDto;
+import com.modsen.driverservice.dto.DriverPageDto;
 import com.modsen.driverservice.service.DriverService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -38,9 +39,10 @@ public class DriverController {
   }
 
   @GetMapping()
-  public ResponseEntity<List<DriverDto>> getAll(Pageable pageable) {
-    List<DriverDto> passengers = driverService.getAll(pageable);
-    return ResponseEntity.ok(passengers);
+  public ResponseEntity<DriverPageDto> getAll(Pageable pageable) {
+    List<DriverDto> driverDtoList = driverService.getAll(pageable);
+    DriverPageDto driverPageDto = DriverPageDto.builder().driverDtoList(driverDtoList).build();
+    return ResponseEntity.ok(driverPageDto);
   }
 
   @PostMapping
@@ -59,8 +61,8 @@ public class DriverController {
   public ResponseEntity<DriverDto> updateRating(
       @PathVariable("id") long id,
       @PathVariable("rating")
-          @Min(value = 0, message = "Rating should be between 0 and 5")
-          @Max(value = 5, message = "Rating should be between 0 and 5")
+          @Min(value = 0, message = "{driver.rating.min-max.error}")
+          @Max(value = 5, message = "{driver.rating.min-max.error}")
           int rating) {
     return ResponseEntity.status(OK).body(driverService.updateRating(id, rating));
   }

@@ -76,9 +76,7 @@ public class DriverServiceImpl implements DriverService {
         driver.setAvailable(DEFAULT_AVAILABILITY_NEW_DRIVER);
         driver.setRating(DEFAULT_RATING_NEW_DRIVER);
         Driver createdDriver = driverRepository.save(driver);
-        DriverDto dto = driverMapper.toDto(createdDriver);
-        dto.setRating(DEFAULT_RATING_NEW_DRIVER);
-        return dto;
+    return driverMapper.toDto(createdDriver);
     }
 
     @Override
@@ -90,10 +88,9 @@ public class DriverServiceImpl implements DriverService {
     @Override
     @Transactional
     public void update(long id, DriverDto driverDto) {
-        Driver driverFromDB = getDriver(id);
+        getDriver(id);
         driverDto.setId(id);
         Driver driver = driverMapper.toEntity(driverDto);
-        driver.setRating(driverFromDB.getRating());
         driverRepository.save(driver);
     }
 

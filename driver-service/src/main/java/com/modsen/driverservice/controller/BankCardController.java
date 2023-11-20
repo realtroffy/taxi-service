@@ -1,6 +1,7 @@
 package com.modsen.driverservice.controller;
 
 import com.modsen.driverservice.dto.BankCardDto;
+import com.modsen.driverservice.dto.BankCardPageDto;
 import com.modsen.driverservice.service.BankCardService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -34,14 +35,16 @@ public class BankCardController {
   }
 
   @GetMapping
-  public ResponseEntity<List<BankCardDto>> getAll(Pageable pageable) {
+  public ResponseEntity<BankCardPageDto> getAll(Pageable pageable) {
     List<BankCardDto> bankCards = bankCardService.getAll(pageable);
-    return ResponseEntity.ok(bankCards);
+    BankCardPageDto bankCardPageDto = BankCardPageDto.builder().bankCardDtoList(bankCards).build();
+    return ResponseEntity.ok(bankCardPageDto);
   }
 
   @PostMapping
   public ResponseEntity<BankCardDto> save(@RequestBody @Valid BankCardDto bankCardDto) {
-    return ResponseEntity.status(CREATED).body(bankCardService.save(bankCardDto));
+    BankCardDto cardDto = bankCardService.save(bankCardDto);
+    return ResponseEntity.status(CREATED).body(cardDto);
   }
 
   @PutMapping("/{id}")

@@ -1,6 +1,7 @@
 package com.modsen.driverservice.controller;
 
 import com.modsen.driverservice.dto.CarDto;
+import com.modsen.driverservice.dto.CarPageDto;
 import com.modsen.driverservice.service.CarService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -34,14 +35,16 @@ public class CarController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CarDto>> getAll(Pageable pageable) {
+    public ResponseEntity<CarPageDto> getAll(Pageable pageable) {
         List<CarDto> cars = carService.getAll(pageable);
-        return ResponseEntity.ok(cars);
+        CarPageDto carPageDto = CarPageDto.builder().carPageDtoList(cars).build();
+        return ResponseEntity.ok(carPageDto);
     }
 
     @PostMapping
     public ResponseEntity<CarDto> save(@RequestBody @Valid CarDto carDto) {
-        return ResponseEntity.status(CREATED).body(carService.save(carDto));
+        CarDto createdCarDto = carService.save(carDto);
+        return ResponseEntity.status(CREATED).body(createdCarDto);
     }
 
     @PutMapping
