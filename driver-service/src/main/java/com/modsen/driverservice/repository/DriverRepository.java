@@ -14,12 +14,12 @@ import java.util.Optional;
 
 public interface DriverRepository extends PagingAndSortingRepository<Driver, Long> {
 
-  @EntityGraph(attributePaths = {"bankCards","car"})
-  Optional<Driver> findById(Long id);
+    @EntityGraph(attributePaths = {"bankCards", "car"})
+    Optional<Driver> findById(Long id);
 
-  @EntityGraph(attributePaths = {"bankCards","car"})
-  List<Driver> findByIdIn(Collection<Long> id, Sort sort);
+    @EntityGraph(attributePaths = {"bankCards", "car"})
+    List<Driver> findByIdIn(Collection<Long> id, Sort sort);
 
-  @Query("SELECT d.id FROM Driver d")
-  Page<Long> findAllIds(Pageable pageable);
+    @Query("SELECT d.id FROM Driver d")
+    Page<Long> findAllIds(Pageable pageable);
 }

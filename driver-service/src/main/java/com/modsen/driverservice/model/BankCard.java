@@ -26,36 +26,36 @@ import java.util.Objects;
 @Table(name = "bank_cards")
 public class BankCard implements Serializable {
 
-  private static final long serialVersionUID = -5846079447491163597L;
+    private static final long serialVersionUID = -5846079447491163597L;
 
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "driver_id")
-  @ToString.Exclude
-  private Driver driver;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "driver_id")
+    @ToString.Exclude
+    private Driver driver;
 
-  @Column(name = "card_number", nullable = false, unique = true)
-  private Long cardNumber;
+    @Column(name = "card_number", nullable = false, unique = true)
+    private Long cardNumber;
 
-  @Column(name = "balance", nullable = false)
-  private BigDecimal balance;
+    @Column(name = "balance", nullable = false)
+    private BigDecimal balance;
 
-  @Column(name = "is_default", nullable = false)
-  private boolean isDefault;
+    @Column(name = "is_default", nullable = false)
+    private boolean isDefault;
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    BankCard bankCard = (BankCard) o;
-    return Objects.equals(id, bankCard.id);
-  }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        BankCard bankCard = (BankCard) o;
+        return Objects.equals(id, bankCard.id);
+    }
 
-  @Override
-  public int hashCode() {
-    return Objects.hash(id);
-  }
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 }

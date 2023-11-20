@@ -1,25 +1,28 @@
 package com.modsen.driverservice.service;
 
 import com.modsen.driverservice.dto.DriverDto;
+import com.modsen.driverservice.model.Driver;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
 public interface DriverService {
 
-  DriverDto getById(long id);
+    DriverDto getById(long id);
 
-  List<DriverDto> getAll(Pageable pageable);
+    Driver getDriverById(long id);
 
-  DriverDto save(DriverDto driverDto);
+    List<DriverDto> getAll(Pageable pageable);
 
-  void deleteById(long id);
+    DriverDto save(DriverDto driverDto);
 
-  void update(long id, DriverDto driverDto);
+    void deleteById(long id);
 
-  DriverDto updateRating(long id, double rating);
+    void update(long id, DriverDto driverDto);
 
-  void addBankCardToDriver(long driverId, long bankCardId);
+    DriverDto updateRating(long id, double rating);
 
-  void removeBankCardToDriver(long driverId, long bankCardId);
+    void addBankCardToDriver(long driverId, long bankCardId);
+
+    void removeBankCardToDriver(long driverId, long bankCardId);
 }

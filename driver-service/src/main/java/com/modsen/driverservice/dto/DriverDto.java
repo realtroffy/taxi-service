@@ -1,14 +1,11 @@
 package com.modsen.driverservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.modsen.driverservice.model.Car;
 import lombok.Data;
 
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
-import java.util.ArrayList;
-import java.util.List;
 
 import static com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY;
 import static com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY;
@@ -37,8 +34,4 @@ public class DriverDto {
   private Double rating;
 
   private boolean isActive;
-
-  private List<BankCardDto> bankCards = new ArrayList<>();
-
-  private Car car;
 }
