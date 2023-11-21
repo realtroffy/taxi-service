@@ -26,7 +26,7 @@
 		<spring-boot-starter-version>2.7.17</spring-boot-starter-version>
 		<lombok.version>1.18.30</lombok.version>
 		<postgresql.version>42.3.8</postgresql.version>
-		<liquibase-core.version>4.9.1</liquibase-core.version>
+		<liquibase-core.version>4.23.0</liquibase-core.version>
 		<maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
 	</properties>
 
@@ -119,6 +119,11 @@
 						</exclude>
 					</excludes>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.liquibase</groupId>
+				<artifactId>liquibase-maven-plugin</artifactId>
+				<version>${liquibase-core.version}</version>
 			</plugin>
 		</plugins>
 		</pluginManagement>
