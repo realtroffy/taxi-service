@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS unique_driver_id_is_default;
