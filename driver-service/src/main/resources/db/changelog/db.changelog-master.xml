@@ -13,7 +13,7 @@
         <tagDatabase tag="db_init"/>
     </changeSet>
 
-    <changeSet id="7" author="Your Author">
+    <changeSet id="7" author="Artur Asiptsou">
         <tagDatabase tag="after_db_changelog_1.0"/>
     </changeSet>
 
