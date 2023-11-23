@@ -14,12 +14,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
-
 import java.util.List;
 
 import static org.springframework.http.HttpStatus.CREATED;
@@ -85,5 +85,14 @@ public class DriverController {
       @PathVariable("driverId") long driverId, @PathVariable("bankCardId") long bankCardId) {
     driverService.removeBankCardToDriver(driverId, bankCardId);
     return ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/available")
+  public ResponseEntity<DriverDto> getRandomFromAllAvailable(
+      @RequestParam(value = "isAvailable", required = false, defaultValue = "true")
+          boolean isAvailable,
+      Pageable pageable) {
+    DriverDto randomAvailable = driverService.getRandomAvailable(isAvailable, pageable);
+    return ResponseEntity.ok(randomAvailable);
   }
 }

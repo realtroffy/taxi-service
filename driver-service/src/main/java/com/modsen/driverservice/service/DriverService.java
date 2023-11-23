@@ -25,4 +25,6 @@ public interface DriverService {
     void addBankCardToDriver(long driverId, long bankCardId);
 
     void removeBankCardToDriver(long driverId, long bankCardId);
+
+    DriverDto getRandomAvailable(boolean isAvailable, Pageable pageable);
 }

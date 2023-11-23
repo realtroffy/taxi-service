@@ -18,7 +18,7 @@ public class BankCardDto {
   @Digits(
       integer = 16,
       fraction = 0,
-      message = "{card.number.validation.error}")
+      message = "{card.number.error}")
   @NotNull
   private Long cardNumber;
 

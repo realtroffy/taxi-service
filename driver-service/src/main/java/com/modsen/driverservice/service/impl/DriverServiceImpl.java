@@ -17,106 +17,118 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @AllArgsConstructor
 public class DriverServiceImpl implements DriverService {
 
-    public static final String NO_SUCH_DRIVER_EXCEPTION_MESSAGE = "Driver was not found by id = ";
-    public static final Double DEFAULT_RATING_NEW_DRIVER = 5.0;
-    public static final boolean DEFAULT_AVAILABILITY_NEW_DRIVER = false;
-    private final DriverRepository driverRepository;
-    private final BankCardService bankCardService;
-    private final BankCardMapper bankCardMapper;
-    private final DriverMapper driverMapper;
+  public static final String NO_SUCH_DRIVER_EXCEPTION_MESSAGE = "Driver was not found by id = ";
+  public static final Double DEFAULT_RATING_NEW_DRIVER = 5.0;
+  public static final boolean DEFAULT_AVAILABILITY_NEW_DRIVER = false;
+  private final DriverRepository driverRepository;
+  private final BankCardService bankCardService;
+  private final BankCardMapper bankCardMapper;
+  private final DriverMapper driverMapper;
 
-    @Override
-    @Transactional(readOnly = true)
-    public DriverDto getById(long id) {
-        Driver driver = getDriver(id);
-        DriverDto driverDto = driverMapper.toDto(driver);
-        driverDto.setRating(driver.getRating());
-        return driverDto;
-    }
+  @Override
+  @Transactional(readOnly = true)
+  public DriverDto getById(long id) {
+    Driver driver = getDriver(id);
+    DriverDto driverDto = driverMapper.toDto(driver);
+    driverDto.setRating(driver.getRating());
+    return driverDto;
+  }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Driver getDriverById(long id) {
-        return getDriver(id);
-    }
+  @Override
+  @Transactional(readOnly = true)
+  public Driver getDriverById(long id) {
+    return getDriver(id);
+  }
 
+  private Driver getDriver(long id) {
+    return driverRepository
+        .findById(id)
+        .orElseThrow(() -> new NoSuchElementException(NO_SUCH_DRIVER_EXCEPTION_MESSAGE + id));
+  }
 
-    private Driver getDriver(long id) {
-        return driverRepository
-                .findById(id)
-                .orElseThrow(() -> new NoSuchElementException(NO_SUCH_DRIVER_EXCEPTION_MESSAGE + id));
-    }
+  @Override
+  @Transactional(readOnly = true)
+  public List<DriverDto> getAll(Pageable pageable) {
+    Page<Long> ids = driverRepository.findAllIds(pageable);
+    return getDriverDtos(pageable, ids);
+  }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<DriverDto> getAll(Pageable pageable) {
-        Page<Long> ids =
-                driverRepository.findAllIds(pageable);
-        List<DriverDto> drivers = new ArrayList<>();
-        List<Driver> byIdIn = driverRepository.findByIdIn(ids.toList(), pageable.getSort());
-        byIdIn.forEach(
-                driver -> {
-                    DriverDto driverDto = driverMapper.toDto(driver);
-                    driverDto.setRating(driver.getRating());
-                    drivers.add(driverDto);
-                });
-
-        return drivers;
-    }
-
-    @Override
-    @Transactional
-    public DriverDto save(DriverDto driverDto) {
-        Driver driver = driverMapper.toEntity(driverDto);
-        driver.setAvailable(DEFAULT_AVAILABILITY_NEW_DRIVER);
-        driver.setRating(DEFAULT_RATING_NEW_DRIVER);
-        Driver createdDriver = driverRepository.save(driver);
+  @Override
+  @Transactional
+  public DriverDto save(DriverDto driverDto) {
+    Driver driver = driverMapper.toEntity(driverDto);
+    driver.setAvailable(DEFAULT_AVAILABILITY_NEW_DRIVER);
+    driver.setRating(DEFAULT_RATING_NEW_DRIVER);
+    Driver createdDriver = driverRepository.save(driver);
     return driverMapper.toDto(createdDriver);
-    }
+  }
 
-    @Override
-    @Transactional
-    public void deleteById(long id) {
-        driverRepository.deleteById(id);
-    }
+  @Override
+  @Transactional
+  public void deleteById(long id) {
+    driverRepository.deleteById(id);
+  }
 
-    @Override
-    @Transactional
-    public void update(long id, DriverDto driverDto) {
-        getDriver(id);
-        driverDto.setId(id);
-        Driver driver = driverMapper.toEntity(driverDto);
-        driverRepository.save(driver);
-    }
+  @Override
+  @Transactional
+  public void update(long id, DriverDto driverDto) {
+    getDriver(id);
+    driverDto.setId(id);
+    Driver driver = driverMapper.toEntity(driverDto);
+    driverRepository.save(driver);
+  }
 
-    @Override
-    @Transactional
-    public DriverDto updateRating(long id, double rating) {
-        Driver driver = getDriver(id);
-        driver.setRating(rating);
-        DriverDto driverDto = driverMapper.toDto(driverRepository.save(driver));
-        driverDto.setRating(rating);
-        return driverDto;
-    }
+  @Override
+  @Transactional
+  public DriverDto updateRating(long id, double rating) {
+    Driver driver = getDriver(id);
+    driver.setRating(rating);
+    DriverDto driverDto = driverMapper.toDto(driverRepository.save(driver));
+    driverDto.setRating(rating);
+    return driverDto;
+  }
 
-    @Override
-    @Transactional
-    public void addBankCardToDriver(long driverId, long bankCardId) {
-        Driver driver = getDriver(driverId);
-        BankCard bankCard = bankCardMapper.toEntity(bankCardService.getById(bankCardId));
-        driver.addCard(bankCard);
-    }
+  @Override
+  @Transactional
+  public void addBankCardToDriver(long driverId, long bankCardId) {
+    Driver driver = getDriver(driverId);
+    BankCard bankCard = bankCardMapper.toEntity(bankCardService.getById(bankCardId));
+    driver.addCard(bankCard);
+  }
 
-    @Override
-    @Transactional
-    public void removeBankCardToDriver(long driverId, long bankCardId) {
-        Driver driver = getDriver(driverId);
-        BankCard bankCard = bankCardMapper.toEntity(bankCardService.getById(bankCardId));
-        driver.removeBankCard(bankCard);
-    }
+  @Override
+  @Transactional
+  public void removeBankCardToDriver(long driverId, long bankCardId) {
+    Driver driver = getDriver(driverId);
+    BankCard bankCard = bankCardMapper.toEntity(bankCardService.getById(bankCardId));
+    driver.removeBankCard(bankCard);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public DriverDto getRandomAvailable(boolean isAvailable, Pageable pageable) {
+    Page<Long> ids = driverRepository.findAllIdsByAvailable(isAvailable, pageable);
+    List<DriverDto> driverDtoList = getDriverDtos(pageable, ids);
+    int randomDriverIndex =
+        ThreadLocalRandom.current().nextInt(driverDtoList.size()) % driverDtoList.size();
+    return driverDtoList.get(randomDriverIndex);
+  }
+
+  private List<DriverDto> getDriverDtos(Pageable pageable, Page<Long> ids) {
+    List<DriverDto> drivers = new ArrayList<>();
+    List<Driver> byIdIn = driverRepository.findByIdIn(ids.toList(), pageable.getSort());
+    byIdIn.forEach(
+        driver -> {
+          DriverDto driverDto = driverMapper.toDto(driver);
+          drivers.add(driverDto);
+        });
+
+    return drivers;
+  }
 }

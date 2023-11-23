@@ -7,6 +7,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.PagingAndSortingRepository;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
@@ -22,4 +23,7 @@ public interface DriverRepository extends PagingAndSortingRepository<Driver, Lon
 
     @Query("SELECT d.id FROM Driver d")
     Page<Long> findAllIds(Pageable pageable);
+
+    @Query("SELECT d.id FROM Driver d WHERE d.isAvailable=:isAvailable")
+    Page<Long> findAllIdsByAvailable(@Param("isAvailable") boolean isAvailable, Pageable pageable);
 }
