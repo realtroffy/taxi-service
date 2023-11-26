@@ -1,13 +1,16 @@
 package com.modsen.passengerservice.service;
 
 import com.modsen.passengerservice.dto.BankCardDto;
+import com.modsen.passengerservice.model.BankCard;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
 public interface BankCardService {
 
-    BankCardDto getById(long id);
+    BankCardDto getDtoById(long id);
+
+    BankCard getEntityById(long id);
 
     List<BankCardDto> getAll(Pageable pageable);
 

@@ -1,7 +1,7 @@
 package com.modsen.passengerservice.controller;
 
+import com.modsen.passengerservice.dto.PassengerAfterRideDto;
 import com.modsen.passengerservice.dto.PassengerDto;
-import com.modsen.passengerservice.dto.PassengerRideDto;
 import com.modsen.passengerservice.service.PassengerService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -66,13 +66,6 @@ public class PassengerController {
     return ResponseEntity.status(OK).body(passengerService.updateRating(id, rating));
   }
 
-  @PutMapping()
-  public ResponseEntity<Void> updateInfoAfterRide(
-      @Valid @RequestBody PassengerRideDto passengerRideDto) {
-    passengerService.updateInfoAfterRide(passengerRideDto);
-    return ResponseEntity.noContent().build();
-  }
-
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@PathVariable("id") long id) {
     passengerService.deleteById(id);
@@ -90,6 +83,13 @@ public class PassengerController {
   public ResponseEntity<Void> deleteBankCardFromPassenger(
       @PathVariable("passengerId") long passengerId, @PathVariable("bankCardId") long bankCardId) {
     passengerService.removeBankCardToPassenger(passengerId, bankCardId);
+    return ResponseEntity.noContent().build();
+  }
+
+  @PutMapping("/after-ride/{id}")
+  public ResponseEntity<Void> updateAfterRide(
+          @PathVariable("id") long id, @Valid @RequestBody PassengerAfterRideDto passengerAfterRideDto) {
+    passengerService.updateAfterRide(id, passengerAfterRideDto);
     return ResponseEntity.noContent().build();
   }
 }

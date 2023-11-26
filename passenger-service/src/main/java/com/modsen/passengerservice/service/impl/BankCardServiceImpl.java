@@ -25,9 +25,14 @@ public class BankCardServiceImpl implements BankCardService {
 
   @Override
   @Transactional(readOnly = true)
-  public BankCardDto getById(long id) {
+  public BankCardDto getDtoById(long id) {
     BankCard bankCard = getBankCard(id);
     return bankCardMapper.toDto(bankCard);
+  }
+
+  @Override
+  public BankCard getEntityById(long id) {
+    return getBankCard(id);
   }
 
   private BankCard getBankCard(long id) {
@@ -40,7 +45,9 @@ public class BankCardServiceImpl implements BankCardService {
   @Transactional(readOnly = true)
   public List<BankCardDto> getAll(Pageable pageable) {
     List<BankCardDto> bankCards = new ArrayList<>();
-    bankCardRepository.findAll(pageable).forEach(bankCard -> bankCards.add(bankCardMapper.toDto(bankCard)));
+    bankCardRepository
+        .findAll(pageable)
+        .forEach(bankCard -> bankCards.add(bankCardMapper.toDto(bankCard)));
     return bankCards;
   }
 

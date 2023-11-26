@@ -8,7 +8,8 @@
 	<modules>
 		<module>passenger-service</module>
         <module>driver-service</module>
-    </modules>
+		<module>ride-service</module>
+	</modules>
 
 	<groupId>com.modsen</groupId>
 	<artifactId>taxi-service</artifactId>
@@ -45,6 +46,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+			<version>${spring-boot-starter-version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webflux</artifactId>
 			<version>${spring-boot-starter-version}</version>
 		</dependency>
 		<dependency>

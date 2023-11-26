@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ThreadLocalRandom;
@@ -111,13 +112,17 @@ public class DriverServiceImpl implements DriverService {
   }
 
   @Override
-  @Transactional(readOnly = true)
-  public DriverDto getRandomAvailable(boolean isAvailable, Pageable pageable) {
+  @Transactional
+  public List<DriverDto> getRandomAvailable(boolean isAvailable, Pageable pageable) {
     Page<Long> ids = driverRepository.findAllIdsByAvailable(isAvailable, pageable);
-    List<DriverDto> driverDtoList = getDriverDtos(pageable, ids);
-    int randomDriverIndex =
-        ThreadLocalRandom.current().nextInt(driverDtoList.size()) % driverDtoList.size();
-    return driverDtoList.get(randomDriverIndex);
+    List<Driver> byIdIn = driverRepository.findByIdIn(ids.toList(), pageable.getSort());
+    if (byIdIn.isEmpty()) {
+      return Collections.emptyList();
+    }
+    int randomDriverIndex = ThreadLocalRandom.current().nextInt(byIdIn.size()) % byIdIn.size();
+    Driver randomAvailable = byIdIn.get(randomDriverIndex);
+    randomAvailable.setAvailable(false);
+    return List.of(driverMapper.toDto(randomAvailable));
   }
 
   private List<DriverDto> getDriverDtos(Pageable pageable, Page<Long> ids) {

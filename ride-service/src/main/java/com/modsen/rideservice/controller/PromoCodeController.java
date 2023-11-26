@@ -1,7 +1,8 @@
-package com.modsen.passengerservice.controller;
+package com.modsen.rideservice.controller;
 
-import com.modsen.passengerservice.dto.BankCardDto;
-import com.modsen.passengerservice.service.BankCardService;
+import com.modsen.rideservice.dto.PromoCodeDto;
+import com.modsen.rideservice.dto.PromoCodePageDto;
+import com.modsen.rideservice.service.PromoCodeService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -23,37 +24,40 @@ import static org.springframework.http.HttpStatus.CREATED;
 @RestController
 @AllArgsConstructor
 @Validated
-@RequestMapping("/api/v1/bankcards")
-public class BankCardController {
+@RequestMapping("/api/v1/promocodes")
+public class PromoCodeController {
 
-  private final BankCardService bankCardService;
+  private final PromoCodeService promoCodeService;
 
   @GetMapping("/{id}")
-  public ResponseEntity<BankCardDto> getById(@PathVariable("id") long id) {
-    return ResponseEntity.ok(bankCardService.getDtoById(id));
+  public ResponseEntity<PromoCodeDto> getById(@PathVariable("id") long id) {
+    return ResponseEntity.ok(promoCodeService.getById(id));
   }
 
   @GetMapping
-  public ResponseEntity<List<BankCardDto>> getAll(Pageable pageable) {
-    List<BankCardDto> bankCards = bankCardService.getAll(pageable);
-    return ResponseEntity.ok(bankCards);
+  public ResponseEntity<PromoCodePageDto> getAll(Pageable pageable) {
+    List<PromoCodeDto> promoCodeDtoList = promoCodeService.getAll(pageable);
+    PromoCodePageDto promoCodePageDto =
+        PromoCodePageDto.builder().promoCodeDtoList(promoCodeDtoList).build();
+    return ResponseEntity.ok(promoCodePageDto);
   }
 
   @PostMapping
-  public ResponseEntity<BankCardDto> save(@RequestBody @Valid BankCardDto bankCardDto) {
-    return ResponseEntity.status(CREATED).body(bankCardService.save(bankCardDto));
+  public ResponseEntity<PromoCodeDto> save(@RequestBody @Valid PromoCodeDto promoCodeDto) {
+    PromoCodeDto savedPromoCode = promoCodeService.save(promoCodeDto);
+    return ResponseEntity.status(CREATED).body(savedPromoCode);
   }
 
   @PutMapping("/{id}")
   public ResponseEntity<Void> update(
-      @PathVariable("id") long id, @Valid @RequestBody BankCardDto bankCardDto) {
-    bankCardService.update(id, bankCardDto);
+      @PathVariable("id") long id, @Valid @RequestBody PromoCodeDto promoCodeDto) {
+    promoCodeService.update(id, promoCodeDto);
     return ResponseEntity.noContent().build();
   }
 
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@PathVariable("id") long id) {
-    bankCardService.deleteById(id);
+    promoCodeService.deleteById(id);
     return ResponseEntity.noContent().build();
   }
 }
