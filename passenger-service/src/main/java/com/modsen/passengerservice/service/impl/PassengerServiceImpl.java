@@ -1,7 +1,7 @@
 package com.modsen.passengerservice.service.impl;
 
+import com.modsen.passengerservice.dto.PassengerAfterRideDto;
 import com.modsen.passengerservice.dto.PassengerDto;
-import com.modsen.passengerservice.dto.PassengerRideDto;
 import com.modsen.passengerservice.mapper.BankCardMapper;
 import com.modsen.passengerservice.mapper.PassengerMapper;
 import com.modsen.passengerservice.model.BankCard;
@@ -26,8 +26,6 @@ public class PassengerServiceImpl implements PassengerService {
 
   private static final String NO_SUCH_PASSENGER_EXCEPTION_MESSAGE =
       "Passenger was not found by id = ";
-  private static final String NO_SUCH_BANK_CARD_EXCEPTION_MESSAGE =
-      "Bank card was not found by id = ";
   private static final Double DEFAULT_RATING_NEW_PASSENGER = 5.0;
   private final PassengerRepository passengerRepository;
   private final BankCardService bankCardService;
@@ -95,7 +93,7 @@ public class PassengerServiceImpl implements PassengerService {
   @Transactional
   public void addBankCardToPassenger(long passengerId, long bankCardId) {
     Passenger passenger = getPassenger(passengerId);
-    BankCard bankCard = bankCardMapper.toEntity(bankCardService.getById(bankCardId));
+    BankCard bankCard = bankCardMapper.toEntity(bankCardService.getDtoById(bankCardId));
     passenger.addCard(bankCard);
   }
 
@@ -103,22 +101,18 @@ public class PassengerServiceImpl implements PassengerService {
   @Transactional
   public void removeBankCardToPassenger(long passengerId, long bankCardId) {
     Passenger passenger = getPassenger(passengerId);
-    BankCard bankCard = bankCardMapper.toEntity(bankCardService.getById(bankCardId));
+    BankCard bankCard = bankCardMapper.toEntity(bankCardService.getDtoById(bankCardId));
     passenger.removeBankCard(bankCard);
   }
 
   @Override
   @Transactional
-  public void updateInfoAfterRide(PassengerRideDto passengerRideDto) {
-    Passenger passenger = getPassenger(passengerRideDto.getPassengerId());
-    passenger.setRating(passengerRideDto.getRatingFromDriver());
-    if (passengerRideDto.isCardPayed()) {
-      BankCard bankCard =
-          passenger.getBankCards().stream()
-              .filter(BankCard::isDefault)
-              .findFirst()
-              .orElseThrow(() -> new NoSuchElementException(NO_SUCH_BANK_CARD_EXCEPTION_MESSAGE));
-      bankCard.setBalance(bankCard.getBalance().subtract(passengerRideDto.getAmountRide()));
+  public void updateAfterRide(Long passengerId, PassengerAfterRideDto passengerAfterRideDto) {
+    Passenger passenger = getPassenger(passengerId);
+    passenger.setRating(passengerAfterRideDto.getPassengerRating());
+    if (passengerAfterRideDto.getPassengerBankCardId()!=null) {
+      BankCard bankCard = bankCardService.getEntityById(passengerAfterRideDto.getPassengerBankCardId());
+      bankCard.setBalance(bankCard.getBalance().subtract(passengerAfterRideDto.getRideCost()));
     }
   }
 }

@@ -1,0 +1,17 @@
+CREATE TABLE rides
+(
+    id                     BIGSERIAL PRIMARY KEY,
+    start_location         VARCHAR(255)   NOT NULL,
+    end_location           VARCHAR(255)   NOT NULL,
+    passenger_id           BIGINT         NOT NULL,
+    driver_id              BIGINT         NOT NULL,
+    driver_rating          INTEGER,
+    passenger_rating       INTEGER,
+    booking_time           TIMESTAMP      NOT NULL,
+    approved_time          TIMESTAMP      NOT NULL,
+    start_time             TIMESTAMP      NOT NULL,
+    finish_time            TIMESTAMP,
+    passenger_bank_card_id BIGINT,
+    promo_code_id          BIGINT,
+    cost                   NUMERIC(10, 2) NOT NULL
+);
