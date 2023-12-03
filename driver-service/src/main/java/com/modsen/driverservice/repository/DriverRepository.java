@@ -26,4 +26,7 @@ public interface DriverRepository extends PagingAndSortingRepository<Driver, Lon
 
     @Query("SELECT d.id FROM Driver d WHERE d.isAvailable=:isAvailable")
     Page<Long> findAllIdsByAvailable(@Param("isAvailable") boolean isAvailable, Pageable pageable);
+
+    @Query(value = "SELECT * FROM drivers WHERE is_available = true ORDER BY RANDOM() LIMIT 1", nativeQuery = true)
+    Optional<Driver> findRandomAvailable();
 }

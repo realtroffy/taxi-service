@@ -8,8 +8,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.NoSuchElementException;
 
 import static reactor.core.publisher.Mono.error;
 
@@ -27,7 +29,10 @@ public class WebClientDriverServiceUpdateAfterRideImpl implements WebClientServi
         .retrieve()
         .onStatus(
             HttpStatus::is4xxClientError,
-            error -> error(new BadRequestException("Bad request for driver service url")))
+            response ->
+                response
+                    .bodyToMono(String.class)
+                    .flatMap(error -> Mono.error(new NoSuchElementException(error))))
         .onStatus(
             HttpStatus::is5xxServerError,
             error -> error(new ServerUnavailableException("Driver service is not responding")))

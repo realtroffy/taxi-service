@@ -1,6 +1,6 @@
 package com.modsen.rideservice.service;
 
-import com.modsen.rideservice.dto.RatingDto;
+import com.modsen.rideservice.dto.PassengerRatingFinishDto;
 import com.modsen.rideservice.dto.RideDto;
 import org.springframework.data.domain.Pageable;
 
@@ -10,7 +10,7 @@ public interface RideService {
 
   RideDto order(RideDto rideDto);
 
-  void finish(Long rideId, RatingDto ratingDto);
+  void finishByDriver(Long rideId, PassengerRatingFinishDto passengerRatingFinishDto);
 
   RideDto getById(long id);
 
@@ -19,4 +19,9 @@ public interface RideService {
   void deleteById(long id);
 
   void update(long id, RideDto rideDto);
+
+  RideDto cancelByPassenger(Long rideId);
+
+  void updateDriverRatingAfterRide(Long rideId, Integer driverRating);
 }
+

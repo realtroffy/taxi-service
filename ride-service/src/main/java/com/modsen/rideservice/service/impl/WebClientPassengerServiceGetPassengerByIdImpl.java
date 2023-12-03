@@ -1,7 +1,6 @@
 package com.modsen.rideservice.service.impl;
 
-import com.modsen.rideservice.dto.DriverPageDto;
-import com.modsen.rideservice.exception.BadRequestException;
+import com.modsen.rideservice.dto.PassengerDto;
 import com.modsen.rideservice.exception.ServerUnavailableException;
 import com.modsen.rideservice.service.WebClientService;
 import lombok.AllArgsConstructor;
@@ -18,15 +17,16 @@ import static reactor.core.publisher.Mono.error;
 
 @Service
 @AllArgsConstructor
-public class WebClientDriverServiceGetDriverImpl implements WebClientService<DriverPageDto> {
+public class WebClientPassengerServiceGetPassengerByIdImpl
+    implements WebClientService<PassengerDto> {
 
   private final WebClient webClient;
 
   @Override
-  public ResponseEntity<DriverPageDto> getResponseEntity(String url, Object body) {
+  public ResponseEntity<PassengerDto> getResponseEntity(String passengerUrl, Object body) {
     return webClient
         .get()
-        .uri(url)
+        .uri(passengerUrl)
         .retrieve()
         .onStatus(
             HttpStatus::is4xxClientError,
@@ -36,8 +36,8 @@ public class WebClientDriverServiceGetDriverImpl implements WebClientService<Dri
                     .flatMap(error -> Mono.error(new NoSuchElementException(error))))
         .onStatus(
             HttpStatus::is5xxServerError,
-            error -> error(new ServerUnavailableException("Driver service is not responding")))
-        .toEntity(DriverPageDto.class)
+            error -> error(new ServerUnavailableException("Passenger service is not responding")))
+        .toEntity(PassengerDto.class)
         .timeout(Duration.ofMinutes(1))
         .block();
   }

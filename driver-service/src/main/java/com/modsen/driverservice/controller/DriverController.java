@@ -2,6 +2,7 @@ package com.modsen.driverservice.controller;
 
 import com.modsen.driverservice.dto.DriverDto;
 import com.modsen.driverservice.dto.DriverPageDto;
+import com.modsen.driverservice.dto.IdPageDto;
 import com.modsen.driverservice.service.DriverService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -83,9 +84,16 @@ public class DriverController {
     return ResponseEntity.noContent().build();
   }
 
-  @PutMapping("/available")
-  public ResponseEntity<DriverPageDto> orderRandomAvailable(Pageable pageable) {
-    List<DriverDto> driverDtoList = driverService.getRandomAvailable(true, pageable);
+  @PutMapping("/{driverId}/available-true")
+  public ResponseEntity<Void> updateAvailabilityToTrueAfterFinishedRide(
+      @PathVariable("driverId") long driverId) {
+    driverService.updateAvailabilityToTrueAfterFinishedRide(driverId);
+    return ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/list-id")
+  public ResponseEntity<DriverPageDto> getDriversByIds(@RequestBody IdPageDto idPageDto) {
+    List<DriverDto> driverDtoList = driverService.getDriversByIds(idPageDto.getListId());
     DriverPageDto driverPageDto = DriverPageDto.builder().driverDtoList(driverDtoList).build();
     return ResponseEntity.ok(driverPageDto);
   }

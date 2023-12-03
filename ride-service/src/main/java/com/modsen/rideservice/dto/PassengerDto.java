@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
+import java.util.List;
 
 @Getter
 @Setter
@@ -15,7 +15,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class BankCardBalanceDto {
+public class PassengerDto {
 
-  private BigDecimal balance;
+  private Long id;
+
+  private List<BankCardDto> bankCards;
 }

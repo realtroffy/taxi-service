@@ -1,6 +1,6 @@
 package com.modsen.rideservice.service.impl;
 
-import com.modsen.rideservice.dto.DriverPageDto;
+import com.modsen.rideservice.dto.DriverWithCarDto;
 import com.modsen.rideservice.exception.BadRequestException;
 import com.modsen.rideservice.exception.ServerUnavailableException;
 import com.modsen.rideservice.service.WebClientService;
@@ -18,12 +18,12 @@ import static reactor.core.publisher.Mono.error;
 
 @Service
 @AllArgsConstructor
-public class WebClientDriverServiceGetDriverImpl implements WebClientService<DriverPageDto> {
+public class WebClientDriverServiceGetDriverByIdImpl implements WebClientService<DriverWithCarDto> {
 
   private final WebClient webClient;
 
   @Override
-  public ResponseEntity<DriverPageDto> getResponseEntity(String url, Object body) {
+  public ResponseEntity<DriverWithCarDto> getResponseEntity(String url, Object body) {
     return webClient
         .get()
         .uri(url)
@@ -37,7 +37,7 @@ public class WebClientDriverServiceGetDriverImpl implements WebClientService<Dri
         .onStatus(
             HttpStatus::is5xxServerError,
             error -> error(new ServerUnavailableException("Driver service is not responding")))
-        .toEntity(DriverPageDto.class)
+        .toEntity(DriverWithCarDto.class)
         .timeout(Duration.ofMinutes(1))
         .block();
   }

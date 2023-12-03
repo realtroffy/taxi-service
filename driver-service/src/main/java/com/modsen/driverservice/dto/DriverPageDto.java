@@ -9,5 +9,5 @@ import java.util.List;
 @Data
 public class DriverPageDto {
 
-  List<DriverDto> driverDtoList;
+  private List<DriverDto> driverDtoList;
 }

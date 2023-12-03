@@ -1,20 +1,25 @@
 package com.modsen.rideservice.service.impl;
 
-import com.modsen.rideservice.dto.BankCardBalanceDto;
-import com.modsen.rideservice.dto.DriverDto;
+import com.modsen.rideservice.dto.BankCardDto;
+import com.modsen.rideservice.dto.CarDto;
 import com.modsen.rideservice.dto.DriverPageDto;
+import com.modsen.rideservice.dto.DriverRideDto;
+import com.modsen.rideservice.dto.DriverWithCarDto;
 import com.modsen.rideservice.dto.PassengerAfterRideDto;
-import com.modsen.rideservice.dto.PromoCodeDto;
-import com.modsen.rideservice.dto.RatingDto;
+import com.modsen.rideservice.dto.PassengerDto;
+import com.modsen.rideservice.dto.PassengerRatingFinishDto;
 import com.modsen.rideservice.dto.RideDto;
-import com.modsen.rideservice.exception.AlreadyFinishedRideException;
-import com.modsen.rideservice.exception.DriverServiceAvailableDriversException;
+import com.modsen.rideservice.dto.RideSearchDto;
+import com.modsen.rideservice.exception.AlreadyGetRatingException;
+import com.modsen.rideservice.exception.DriverServiceException;
 import com.modsen.rideservice.exception.FinishDateEarlyThanStartDateException;
 import com.modsen.rideservice.exception.PassengerBankCardNotEnoughMoneyException;
-import com.modsen.rideservice.exception.PassengerBankCardNullException;
+import com.modsen.rideservice.exception.RideStatusException;
 import com.modsen.rideservice.exception.UnfinishedBookingRideException;
 import com.modsen.rideservice.mapper.RideMapper;
+import com.modsen.rideservice.model.PromoCode;
 import com.modsen.rideservice.model.Ride;
+import com.modsen.rideservice.model.Status;
 import com.modsen.rideservice.repository.RideRepository;
 import com.modsen.rideservice.service.PromoCodeService;
 import com.modsen.rideservice.service.RideService;
@@ -22,6 +27,10 @@ import com.modsen.rideservice.service.WebClientService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
+import org.springframework.integration.support.MessageBuilder;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.MessageChannel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +42,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -42,29 +52,31 @@ public class RideServiceImpl implements RideService {
 
   public static final BigDecimal MIN_COST_FOR_RIDE = new BigDecimal("10.0");
   public static final BigDecimal MAX_COST_FOR_RIDE = new BigDecimal("20.0");
-  public static final long TIME_TO_PASSENGER = 10;
   public static final String NO_SUCH_RIDE_EXCEPTION_MESSAGE = "Ride was not found by id = ";
 
   private final RideRepository rideRepository;
   private final WebClientService<DriverPageDto> webClientDriverServiceGetDriver;
-  private final WebClientService<BankCardBalanceDto> webClientPassengerServiceGetBankCard;
+  private final WebClientService<PassengerDto> webClientPassengerServiceUrlGetByIdImpl;
   private final WebClientService<Void> webClientPassengerServiceUpdateAfterRideImpl;
   private final WebClientService<Void> webClientDriverServiceUpdateAfterRideImpl;
+  private final WebClientService<DriverWithCarDto> driverWithCarDtoWebClientService;
   private final PromoCodeService promoCodeService;
   private final RideMapper rideMapper;
-  @PersistenceContext private final EntityManager entityManager;
+  private final MessageChannel toKafkaChannel;
+  @PersistenceContext
+  private final EntityManager entityManager;
 
-  @Value(value = "${driver.service.available.free.driver.url}")
-  private String driverServiceUrl;
-
-  @Value(value = "${passenger.service.bank.card.url}")
-  private String passengerServiceUpdateUrl;
+  @Value(value = "${passenger.service.url}")
+  private String passengerServiceUrl;
 
   @Value(value = "${passenger.service.update.after.ride.url}")
   private String passengerServiceUpdateAfterRideUrl;
 
-  @Value(value = "${driver.service.update.after.ride.url}")
-  private String driverServiceUpdateAfterRideUrl;
+  @Value(value = "${driver.service.url}")
+  private String driverServiceUrl;
+
+  @Value(value = "${spring.kafka.topic.order.new.ride}")
+  private String topicOrderNewRide;
 
   @Override
   @Transactional
@@ -74,63 +86,83 @@ public class RideServiceImpl implements RideService {
     BigDecimal randomCost = generateRandomCost();
     rideDto.setCost(randomCost);
 
-    PromoCodeDto promoCodeDtoByName = getDiscountPromoCodeIfExist(rideDto, randomCost);
+    PromoCode discountPromoCodeIfExist = getDiscountPromoCodeIfExist(rideDto, randomCost);
 
-    checkEnoughMoneyOnPassengerBankCard(rideDto);
+    checkPassengerExistAndHaveEnoughMoneyOnPassengerBankCard(rideDto);
 
     rideDto.setBookingTime(LocalDateTime.now());
+    rideDto.setStatus(Status.PENDING);
 
-    List<DriverDto> driverDtoList = getAvailableDrivers();
-    if (driverDtoList.isEmpty()) {
-      throw new NoSuchElementException("Available driver was not found. Try later");
+    Ride ride = rideMapper.toEntity(rideDto);
+    ride.setPromoCode(discountPromoCodeIfExist);
+    Ride savedRide = rideRepository.save(ride);
+    RideDto savedRideDto = rideMapper.toDto(savedRide);
+
+    RideSearchDto rideSearchDto = RideSearchDto.builder().rideId(ride.getId()).build();
+
+    toKafkaChannel.send(
+        MessageBuilder.withPayload(rideSearchDto)
+            .setHeader(KafkaHeaders.TOPIC, topicOrderNewRide)
+            .build());
+
+    return savedRideDto;
+  }
+
+  @Transactional
+  public void getAvailableDriver(DriverRideDto driverRideDto) {
+    Ride ride = getRide(driverRideDto.getRideId());
+    if (ride.getStatus() == Status.PENDING) {
+      ride.setStatus(Status.ACTIVE);
+      ride.setDriverId(driverRideDto.getId());
+      ride.setApprovedTime(LocalDateTime.now());
+      ride.setStartTime(LocalDateTime.now());
     } else {
-      DriverDto driverDto = driverDtoList.get(0);
-      rideDto.setApprovedTime(LocalDateTime.now());
-      rideDto.setDriverId(driverDto.getId());
-      rideDto.setStartTime(rideDto.getApprovedTime().plusMinutes(TIME_TO_PASSENGER));
-      Ride ride = rideMapper.toEntity(rideDto);
-      ride.setPromoCodeId(promoCodeDtoByName.getId());
-      Ride savedRide = rideRepository.save(ride);
-      RideDto savedDto = rideMapper.toDto(savedRide);
-      savedDto.setCarDto(driverDto.getCarDto());
-      savedDto.setPromoCodeName(promoCodeDtoByName.getName());
-      return savedDto;
+      updateDriverAvailabilityAfterRide(ride);
     }
   }
 
-  private List<DriverDto> getAvailableDrivers() {
-    DriverPageDto driverPageDto =
-        webClientDriverServiceGetDriver.getResponseEntity(driverServiceUrl, null).getBody();
-    if (driverPageDto == null) {
-      throw new DriverServiceAvailableDriversException("Page of available drivers is null");
+  @Transactional
+  public void getNotFoundDriver(DriverRideDto driverRideDto) {
+    Ride ride = getRide(driverRideDto.getRideId());
+    if (ride.getStatus() == Status.PENDING) {
+      ride.setStatus(Status.NO_DRIVERS);
     }
-    return driverPageDto.getDriverDtoList();
   }
 
-  private PromoCodeDto getDiscountPromoCodeIfExist(RideDto rideDto, BigDecimal randomCost) {
-    PromoCodeDto promoCodeDtoByName = new PromoCodeDto();
+  private PromoCode getDiscountPromoCodeIfExist(RideDto rideDto, BigDecimal randomCost) {
+    PromoCode promoCodeByName = null;
     if (rideDto.getPromoCodeName() != null) {
-      promoCodeDtoByName = promoCodeService.getByName(rideDto.getPromoCodeName());
-      BigDecimal discount = promoCodeDtoByName.getDiscount();
+      promoCodeByName = promoCodeService.getByName(rideDto.getPromoCodeName());
+      BigDecimal discount = promoCodeByName.getDiscount();
       rideDto.setCost(randomCost.multiply(discount));
     }
-    return promoCodeDtoByName;
+    return promoCodeByName;
   }
 
-  private void checkEnoughMoneyOnPassengerBankCard(RideDto rideDto) {
-    if (rideDto.getPassengerBankCardId() != null) {
-      BankCardBalanceDto bankCardBalanceDto =
-          webClientPassengerServiceGetBankCard
-              .getResponseEntity(
-                  passengerServiceUpdateUrl + "/" + rideDto.getPassengerBankCardId(), null)
-              .getBody();
-      if (bankCardBalanceDto == null) {
-        throw new PassengerBankCardNullException("Passenger bank card is null");
-      }
-      if (bankCardBalanceDto.getBalance().compareTo(rideDto.getCost()) < 1) {
-        throw new PassengerBankCardNotEnoughMoneyException(
-            "Not enough money on your bank card. Choose another bank card to pay or pay cash");
-      }
+  private void checkPassengerExistAndHaveEnoughMoneyOnPassengerBankCard(RideDto rideDto) {
+    ResponseEntity<PassengerDto> passengerDtoResponseEntity =
+        webClientPassengerServiceUrlGetByIdImpl.getResponseEntity(
+            passengerServiceUrl + "/" + rideDto.getPassengerId(), null);
+
+    PassengerDto passengerDto = passengerDtoResponseEntity.getBody();
+    if (passengerDto == null) {
+      throw new NoSuchElementException(
+          "Passenger was not found by such id = " + rideDto.getPassengerId());
+    }
+    long count =
+        passengerDto.getBankCards().stream()
+            .map(BankCardDto::getId)
+            .filter(id -> id == rideDto.getPassengerBankCardId().intValue())
+            .count();
+    if (count == 0) {
+      throw new NoSuchElementException(
+          "Passenger bank card was not found by such id = " + rideDto.getPassengerBankCardId());
+    }
+    BankCardDto bankCardDto =
+        passengerDto.getBankCards().get(rideDto.getPassengerBankCardId().intValue());
+    if (bankCardDto.getBalance().compareTo(rideDto.getCost()) < 1) {
+      throw new PassengerBankCardNotEnoughMoneyException(
+          "Not enough money on your bank card. Choose another bank card to pay or pay cash");
     }
   }
 
@@ -154,7 +186,24 @@ public class RideServiceImpl implements RideService {
   @Transactional(readOnly = true)
   public RideDto getById(long id) {
     Ride ride = getRide(id);
-    return rideMapper.toDto(ride);
+    CarDto carDto = null;
+    if (ride.getDriverId() != null) {
+      try {
+        carDto =
+            driverWithCarDtoWebClientService
+                .getResponseEntity(driverServiceUrl + "/" + ride.getDriverId(), null)
+                .getBody()
+                .getCarDto();
+      } catch (NullPointerException exception) {
+        throw new DriverServiceException(
+            "Driver service return null body or driver without car. May be driver or his car was deleted");
+      }
+    }
+    RideDto rideDto = rideMapper.toDto(ride);
+    if (carDto != null) {
+      rideDto.setCarDto(carDto);
+    }
+    return rideDto;
   }
 
   private Ride getRide(long id) {
@@ -165,25 +214,30 @@ public class RideServiceImpl implements RideService {
 
   @Override
   @Transactional
-  public void finish(Long rideId, RatingDto ratingDto) {
-    Ride ride = updateRideAfterFinish(rideId, ratingDto);
-
+  public void finishByDriver(Long rideId, PassengerRatingFinishDto passengerRatingFinishDto) {
+    Ride ride = updateRideAfterFinish(rideId, passengerRatingFinishDto);
+    updateDriverAvailabilityAfterRide(ride);
     updatePassengerAfterRide(ride);
-
-    updateDriverAfterRide(ride);
   }
 
-  private void updateDriverAfterRide(Ride ride) {
-    Double averageDriverRatingByDriverId =
-        rideRepository.findAverageDriverRatingByDriverId(ride.getDriverId());
+  @Override
+  @Transactional
+  public RideDto cancelByPassenger(Long rideId) {
+    Ride ride = getRide(rideId);
+    Status rideStatus = ride.getStatus();
+    if (rideStatus == Status.PENDING || rideStatus == Status.NO_DRIVERS) {
+      ride.setStatus(Status.CANCELED);
+      ride.setFinishTime(LocalDateTime.now());
+      return rideMapper.toDto(ride);
+    } else {
+      throw new RideStatusException(
+          "You could cancel ride only if it has status 'pending' or 'no drivers'");
+    }
+  }
 
+  private void updateDriverAvailabilityAfterRide(Ride ride) {
     webClientDriverServiceUpdateAfterRideImpl.getResponseEntity(
-        driverServiceUpdateAfterRideUrl
-            + "/"
-            + ride.getDriverId()
-            + "/"
-            + averageDriverRatingByDriverId,
-        null);
+        driverServiceUrl + "/" + ride.getDriverId() + "/available-true", null);
   }
 
   private void updatePassengerAfterRide(Ride ride) {
@@ -199,16 +253,17 @@ public class RideServiceImpl implements RideService {
             .build());
   }
 
-  private Ride updateRideAfterFinish(Long rideId, RatingDto ratingDto) {
+  private Ride updateRideAfterFinish(
+      Long rideId, PassengerRatingFinishDto passengerRatingFinishDto) {
     Ride ride = getRide(rideId);
 
-    if (ride.getFinishTime() != null) {
-      throw new AlreadyFinishedRideException("Ride is already finished");
+    if (ride.getStatus() != Status.ACTIVE) {
+      throw new RideStatusException("You could finish only active ride");
     }
 
     ride.setFinishTime(LocalDateTime.now());
-    ride.setDriverRating(ratingDto.getDriverRating());
-    ride.setPassengerRating(ratingDto.getPassengerRating());
+    ride.setStatus(Status.FINISHED);
+    ride.setPassengerRating(passengerRatingFinishDto.getPassengerRating());
 
     rideRepository.save(ride);
     entityManager.flush();
@@ -216,14 +271,75 @@ public class RideServiceImpl implements RideService {
   }
 
   @Override
+  @Transactional
+  public void updateDriverRatingAfterRide(Long rideId, Integer driverRating) {
+    Ride ride = getRide(rideId);
+    if (ride.getDriverRating() != null) {
+      throw new AlreadyGetRatingException("Driver already get rating for ride with id =" + rideId);
+    }
+    Status status = ride.getStatus();
+    if (!(status == Status.FINISHED || status == Status.ACTIVE)) {
+      throw new RideStatusException("You could rate driver only if ride is active or finished");
+    }
+    ride.setDriverRating(driverRating);
+    entityManager.flush();
+    Double averageDriverRatingByDriverId =
+        rideRepository.findAverageDriverRatingByDriverId(ride.getDriverId());
+
+    webClientDriverServiceUpdateAfterRideImpl.getResponseEntity(
+        driverServiceUrl + "/" + ride.getDriverId() + "/" + averageDriverRatingByDriverId, null);
+  }
+
+  @Override
   @Transactional(readOnly = true)
   public List<RideDto> getAll(Pageable pageable) {
-    List<RideDto> rideDtoList = new ArrayList<>();
-    rideRepository
-        .findAll(pageable)
-        .getContent()
-        .forEach(ride -> rideDtoList.add(rideMapper.toDto(ride)));
+    List<RideDto> rideDtoList = getAllRidesWithoutCars(pageable);
+
+    List<Long> driversIdList = getListIdsFromRidesWhereExistDriverId(rideDtoList);
+
+    ResponseEntity<DriverPageDto> driverPageWithCars =
+        getDriversFromDriverServiceByListIds(driversIdList);
+
+    setCarDtoToRides(rideDtoList, driverPageWithCars);
+
     return rideDtoList;
+  }
+
+  private List<RideDto> getAllRidesWithoutCars(Pageable pageable) {
+    return rideRepository.findAll(pageable).getContent().stream()
+        .map(rideMapper::toDto)
+        .collect(Collectors.toList());
+  }
+
+  private void setCarDtoToRides(
+      List<RideDto> rideDtoListWithoutCars, ResponseEntity<DriverPageDto> driverPageWithCars) {
+
+    List<DriverRideDto> driverRideDtoListWithCars;
+    try {
+      driverRideDtoListWithCars = driverPageWithCars.getBody().getDriverDtoList();
+    } catch (NullPointerException exception) {
+      throw new DriverServiceException("Exception while get drivers with cars from driver service");
+    }
+    rideDtoListWithoutCars.forEach(
+        rideWithoutCar -> {
+          for (DriverRideDto driverWithCar : driverRideDtoListWithCars) {
+            if (driverWithCar.getId().equals(rideWithoutCar.getDriverId())) {
+              rideWithoutCar.setCarDto(driverWithCar.getCarDto());
+            }
+          }
+        });
+  }
+
+  private ResponseEntity<DriverPageDto> getDriversFromDriverServiceByListIds(
+      List<Long> driversIdList) {
+    return webClientDriverServiceGetDriver.getResponseEntity(driverServiceUrl, driversIdList);
+  }
+
+  private List<Long> getListIdsFromRidesWhereExistDriverId(List<RideDto> rideDtoList) {
+    return rideDtoList.stream()
+        .map(RideDto::getDriverId)
+        .filter(Objects::nonNull)
+        .collect(Collectors.toList());
   }
 
   @Override

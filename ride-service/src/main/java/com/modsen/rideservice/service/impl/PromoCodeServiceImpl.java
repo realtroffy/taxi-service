@@ -76,12 +76,10 @@ public class PromoCodeServiceImpl implements PromoCodeService {
   }
 
   @Override
-  public PromoCodeDto getByName(String name) {
-    PromoCode promoCode =
-        promoCodeRepository
-            .findByName(name)
-            .orElseThrow(() -> new NoSuchElementException("Promo code not found by such name"));
-    return promoCodeMapper.toDto(promoCode);
+  public PromoCode getByName(String name) {
+    return promoCodeRepository
+        .findByName(name)
+        .orElseThrow(() -> new NoSuchElementException("Promo code not found by such name " + name));
   }
 
   private void checkFromIsBeforeTo(LocalDateTime from, LocalDateTime to) {
