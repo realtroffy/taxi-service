@@ -27,7 +27,7 @@ public class KafkaConfig {
   private String appIdConfig;
 
   @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
-  KafkaStreamsConfiguration kStreamsConfig() {
+  public KafkaStreamsConfiguration kStreamsConfig() {
     Map<String, Object> props = new HashMap<>();
     props.put(APPLICATION_ID_CONFIG, appIdConfig);
     props.put(BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);

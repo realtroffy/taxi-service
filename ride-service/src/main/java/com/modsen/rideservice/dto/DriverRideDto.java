@@ -15,8 +15,8 @@ import lombok.Setter;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DriverRideDto {
 
-  private Long id;
-  private Long rideId;
+  private long id;
+  private long rideId;
   private String firstName;
   private String lastName;
   private CarDto carDto;

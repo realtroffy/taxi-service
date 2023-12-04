@@ -1,10 +1,9 @@
 package com.modsen.rideservice.config.kafka;
 
-import com.modsen.rideservice.dto.DriverRideDto;
 import com.modsen.rideservice.dto.RideSearchDto;
+import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.channel.DirectChannel;
@@ -18,14 +17,13 @@ import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.messaging.MessageChannel;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
+@RequiredArgsConstructor
 public class KafkaProducerConfig {
 
-  @Value(value = "${spring.kafka.bootstrap-servers}")
-  private String bootstrapAddress;
+  private final KafkaProperties kafkaProperties;
 
   @Bean
   public IntegrationFlow kafkaIntegrationFlow(KafkaTemplate<String, Object> kafkaTemplate) {
@@ -41,17 +39,11 @@ public class KafkaProducerConfig {
 
   @Bean
   public Map<String, Object> producerConfig() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
-    props.put(
-        JsonDeserializer.TYPE_MAPPINGS,
-        "rideSearchDto:"
-            + RideSearchDto.class.getName()
-            + ",driverRideDto:"
-            + DriverRideDto.class.getName());
-    return props;
+    return Map.of(
+            ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getBootstrapAddress(),
+            ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
+            ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class,
+            JsonDeserializer.TYPE_MAPPINGS, "rideSearchDto:" + RideSearchDto.class.getName());
   }
 
   @Bean

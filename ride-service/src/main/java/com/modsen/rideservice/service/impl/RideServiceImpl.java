@@ -75,7 +75,7 @@ public class RideServiceImpl implements RideService {
   @Value(value = "${driver.service.url}")
   private String driverServiceUrl;
 
-  @Value(value = "${spring.kafka.topic.order.new.ride}")
+  @Value(value = "${spring.kafka.topic-order-new-ride}")
   private String topicOrderNewRide;
 
   @Override
@@ -323,7 +323,7 @@ public class RideServiceImpl implements RideService {
     rideDtoListWithoutCars.forEach(
         rideWithoutCar -> {
           for (DriverRideDto driverWithCar : driverRideDtoListWithCars) {
-            if (driverWithCar.getId().equals(rideWithoutCar.getDriverId())) {
+            if (driverWithCar.getId()==(rideWithoutCar.getDriverId())) {
               rideWithoutCar.setCarDto(driverWithCar.getCarDto());
             }
           }

@@ -200,20 +200,17 @@ public class DriverServiceImpl implements DriverService {
       DriverRideDto driverRideDto = driverRideDtoMapper.toDriverRideDto(driverDto);
       driverRideDto.setRideId(rideSearchDto.getRideId());
       return driverRideDto;
-    } else {
-      return DriverRideDto.builder().rideId(rideSearchDto.getRideId()).build();
     }
+    return DriverRideDto.builder().rideId(rideSearchDto.getRideId()).build();
   }
 
   private RideSearchDto getRideSearchDtoFromString(String rideSearchDtoString) {
-    RideSearchDto rideSearchDto;
     try {
-      rideSearchDto = objectMapper.readValue(rideSearchDtoString, RideSearchDto.class);
+      return objectMapper.readValue(rideSearchDtoString, RideSearchDto.class);
     } catch (JsonProcessingException e) {
       throw new RideSearchDtoMappingException(
           "Exception occurred while RideSearchDto converting to Json");
     }
-    return rideSearchDto;
   }
 
   @Override
