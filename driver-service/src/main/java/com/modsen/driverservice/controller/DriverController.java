@@ -91,7 +91,7 @@ public class DriverController {
     return ResponseEntity.noContent().build();
   }
 
-  @GetMapping("/list-id")
+  @PostMapping("/list-id")
   public ResponseEntity<DriverPageDto> getDriversByIds(@RequestBody IdPageDto idPageDto) {
     List<DriverDto> driverDtoList = driverService.getDriversByIds(idPageDto.getListId());
     DriverPageDto driverPageDto = DriverPageDto.builder().driverDtoList(driverDtoList).build();

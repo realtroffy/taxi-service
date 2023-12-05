@@ -4,8 +4,6 @@ import com.modsen.rideservice.dto.BankCardDto;
 import com.modsen.rideservice.dto.CarDto;
 import com.modsen.rideservice.dto.DriverPageDto;
 import com.modsen.rideservice.dto.DriverRideDto;
-import com.modsen.rideservice.dto.DriverWithCarDto;
-import com.modsen.rideservice.dto.PassengerAfterRideDto;
 import com.modsen.rideservice.dto.PassengerDto;
 import com.modsen.rideservice.dto.PassengerRatingFinishDto;
 import com.modsen.rideservice.dto.RideDto;
@@ -23,7 +21,6 @@ import com.modsen.rideservice.model.Status;
 import com.modsen.rideservice.repository.RideRepository;
 import com.modsen.rideservice.service.PromoCodeService;
 import com.modsen.rideservice.service.RideService;
-import com.modsen.rideservice.service.WebClientService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
@@ -55,26 +52,13 @@ public class RideServiceImpl implements RideService {
   public static final String NO_SUCH_RIDE_EXCEPTION_MESSAGE = "Ride was not found by id = ";
 
   private final RideRepository rideRepository;
-  private final WebClientService<DriverPageDto> webClientDriverServiceGetDriver;
-  private final WebClientService<PassengerDto> webClientPassengerServiceUrlGetByIdImpl;
-  private final WebClientService<Void> webClientPassengerServiceUpdateAfterRideImpl;
-  private final WebClientService<Void> webClientDriverServiceUpdateAfterRideImpl;
-  private final WebClientService<DriverWithCarDto> driverWithCarDtoWebClientService;
+  private final DriverServiceWebClient driverServiceWebClient;
+  private final PassengerServiceWebClient passengerServiceWebClient;
   private final PromoCodeService promoCodeService;
   private final RideMapper rideMapper;
   private final MessageChannel toKafkaChannel;
   @PersistenceContext
   private final EntityManager entityManager;
-
-  @Value(value = "${passenger.service.url}")
-  private String passengerServiceUrl;
-
-  @Value(value = "${passenger.service.update.after.ride.url}")
-  private String passengerServiceUpdateAfterRideUrl;
-
-  @Value(value = "${driver.service.url}")
-  private String driverServiceUrl;
-
   @Value(value = "${spring.kafka.topic-order-new-ride}")
   private String topicOrderNewRide;
 
@@ -141,8 +125,7 @@ public class RideServiceImpl implements RideService {
 
   private void checkPassengerExistAndHaveEnoughMoneyOnPassengerBankCard(RideDto rideDto) {
     ResponseEntity<PassengerDto> passengerDtoResponseEntity =
-        webClientPassengerServiceUrlGetByIdImpl.getResponseEntity(
-            passengerServiceUrl + "/" + rideDto.getPassengerId(), null);
+        passengerServiceWebClient.getPassengerDtoById(rideDto.getPassengerId());
 
     PassengerDto passengerDto = passengerDtoResponseEntity.getBody();
     if (passengerDto == null) {
@@ -190,8 +173,8 @@ public class RideServiceImpl implements RideService {
     if (ride.getDriverId() != null) {
       try {
         carDto =
-            driverWithCarDtoWebClientService
-                .getResponseEntity(driverServiceUrl + "/" + ride.getDriverId(), null)
+            driverServiceWebClient
+                .getDriverById(ride.getDriverId())
                 .getBody()
                 .getCarDto();
       } catch (NullPointerException exception) {
@@ -236,21 +219,13 @@ public class RideServiceImpl implements RideService {
   }
 
   private void updateDriverAvailabilityAfterRide(Ride ride) {
-    webClientDriverServiceUpdateAfterRideImpl.getResponseEntity(
-        driverServiceUrl + "/" + ride.getDriverId() + "/available-true", null);
+    driverServiceWebClient.updateDriverAvailabilityToTrueAfterRide(ride.getDriverId());
   }
 
   private void updatePassengerAfterRide(Ride ride) {
     Double averagePassengerRatingByPassengerId =
         rideRepository.findAveragePassengerRatingByPassengerId(ride.getPassengerId());
-
-    webClientPassengerServiceUpdateAfterRideImpl.getResponseEntity(
-        passengerServiceUpdateAfterRideUrl + "/" + ride.getPassengerId(),
-        PassengerAfterRideDto.builder()
-            .passengerRating(averagePassengerRatingByPassengerId)
-            .rideCost(ride.getCost())
-            .passengerBankCardId(ride.getPassengerBankCardId())
-            .build());
+    passengerServiceWebClient.updatePassengerAfterRide(ride, averagePassengerRatingByPassengerId);
   }
 
   private Ride updateRideAfterFinish(
@@ -286,8 +261,7 @@ public class RideServiceImpl implements RideService {
     Double averageDriverRatingByDriverId =
         rideRepository.findAverageDriverRatingByDriverId(ride.getDriverId());
 
-    webClientDriverServiceUpdateAfterRideImpl.getResponseEntity(
-        driverServiceUrl + "/" + ride.getDriverId() + "/" + averageDriverRatingByDriverId, null);
+    driverServiceWebClient.updateDriverRatingAfterRide(ride.getDriverId(), averageDriverRatingByDriverId);
   }
 
   @Override
@@ -323,7 +297,7 @@ public class RideServiceImpl implements RideService {
     rideDtoListWithoutCars.forEach(
         rideWithoutCar -> {
           for (DriverRideDto driverWithCar : driverRideDtoListWithCars) {
-            if (driverWithCar.getId()==(rideWithoutCar.getDriverId())) {
+            if (driverWithCar.getId()==rideWithoutCar.getDriverId()) {
               rideWithoutCar.setCarDto(driverWithCar.getCarDto());
             }
           }
@@ -332,7 +306,7 @@ public class RideServiceImpl implements RideService {
 
   private ResponseEntity<DriverPageDto> getDriversFromDriverServiceByListIds(
       List<Long> driversIdList) {
-    return webClientDriverServiceGetDriver.getResponseEntity(driverServiceUrl, driversIdList);
+    return driverServiceWebClient.getDriverPageDtoByListIdsDriver(driversIdList);
   }
 
   private List<Long> getListIdsFromRidesWhereExistDriverId(List<RideDto> rideDtoList) {
