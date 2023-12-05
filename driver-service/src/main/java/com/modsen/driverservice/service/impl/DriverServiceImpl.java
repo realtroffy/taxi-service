@@ -158,7 +158,7 @@ public class DriverServiceImpl implements DriverService {
 
   @Transactional
   @Autowired
-  public void getFreeRandomDriverIfExistAndChangeAvailabilityToFalse(
+  public void getAvailableRandomDriverIfExistAndChangeAvailabilityToFalse(
       StreamsBuilder kStreamBuilder) {
     KStream<String, String> stream =
         kStreamBuilder.stream(orderNewRideTopic, Consumed.with(Serdes.String(), Serdes.String()));
@@ -215,10 +215,11 @@ public class DriverServiceImpl implements DriverService {
 
   @Override
   @Transactional
-  public void updateAvailabilityToTrueAfterFinishedRide(long driverId) {
+  public DriverDto updateAvailabilityToTrueAfterFinishedRide(long driverId) {
     Driver driver = getDriver(driverId);
     driver.setAvailable(true);
-    driverMapper.toDto(driver);
+    driverRepository.save(driver);
+    return driverMapper.toDto(driver);
   }
 
   @Override

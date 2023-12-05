@@ -27,9 +27,9 @@ public interface DriverService {
 
     void removeBankCardToDriver(long driverId, long bankCardId);
 
-    void updateAvailabilityToTrueAfterFinishedRide(long driverId);
+    DriverDto updateAvailabilityToTrueAfterFinishedRide(long driverId);
 
     List<DriverDto> getDriversByIds(List<Long> listId);
 
-    void getFreeRandomDriverIfExistAndChangeAvailabilityToFalse(StreamsBuilder kStreamBuilder);
+    void getAvailableRandomDriverIfExistAndChangeAvailabilityToFalse(StreamsBuilder kStreamBuilder);
 }

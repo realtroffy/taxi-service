@@ -1,6 +1,5 @@
 package com.modsen.rideservice.service.impl;
 
-import com.modsen.rideservice.exception.BadRequestException;
 import com.modsen.rideservice.exception.ServerUnavailableException;
 import com.modsen.rideservice.service.WebClientService;
 import lombok.AllArgsConstructor;
