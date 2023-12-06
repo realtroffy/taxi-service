@@ -4,15 +4,13 @@ import com.modsen.rideservice.dto.PassengerAfterRideDto;
 import com.modsen.rideservice.dto.PassengerDto;
 import com.modsen.rideservice.exception.ServerUnavailableException;
 import com.modsen.rideservice.model.Ride;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
-
 import java.time.Duration;
 import java.util.NoSuchElementException;
 
@@ -23,8 +21,8 @@ public class PassengerServiceWebClient {
 
   private final WebClient webClient;
 
-  public PassengerServiceWebClient(@Value("${passenger.service.url}") String passengerServiceUrl) {
-    this.webClient = WebClient.builder().baseUrl(passengerServiceUrl).build();
+  public PassengerServiceWebClient(@Qualifier("passengerWebClient") WebClient webClient) {
+    this.webClient = webClient;
   }
 
   public ResponseEntity<PassengerDto> getPassengerDtoById(Long passengerId) {
@@ -37,7 +35,7 @@ public class PassengerServiceWebClient {
             response ->
                 response
                     .bodyToMono(String.class)
-                    .flatMap(error -> Mono.error(new NoSuchElementException(error))))
+                    .flatMap(error -> error(new NoSuchElementException(error))))
         .onStatus(
             HttpStatus::is5xxServerError,
             error -> error(new ServerUnavailableException("Passenger service is not responding")))
@@ -65,7 +63,7 @@ public class PassengerServiceWebClient {
             response ->
                 response
                     .bodyToMono(String.class)
-                    .flatMap(error -> Mono.error(new NoSuchElementException(error))))
+                    .flatMap(error -> error(new NoSuchElementException(error))))
         .onStatus(
             HttpStatus::is5xxServerError,
             error -> error(new ServerUnavailableException("Passenger service is not responding")))

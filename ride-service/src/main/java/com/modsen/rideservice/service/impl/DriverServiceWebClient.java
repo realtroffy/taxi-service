@@ -4,15 +4,13 @@ import com.modsen.rideservice.dto.DriverPageDto;
 import com.modsen.rideservice.dto.DriverWithCarDto;
 import com.modsen.rideservice.dto.IdPageDto;
 import com.modsen.rideservice.exception.ServerUnavailableException;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
-
 import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -24,10 +22,11 @@ public class DriverServiceWebClient {
 
   public static final String SERVER_UNAVAILABLE_EXCEPTION_MESSAGE =
       "Driver service is not responding";
+
   private final WebClient webClient;
 
-  public DriverServiceWebClient(@Value("${driver.service.url}") String driverServiceUrl) {
-    this.webClient = WebClient.builder().baseUrl(driverServiceUrl).build();
+  public DriverServiceWebClient(@Qualifier("driverWebClient") WebClient webClient) {
+    this.webClient = webClient;
   }
 
   public ResponseEntity<DriverPageDto> getDriverPageDtoByListIdsDriver(List<Long> driversIdList) {
@@ -45,7 +44,7 @@ public class DriverServiceWebClient {
             response ->
                 response
                     .bodyToMono(String.class)
-                    .flatMap(error -> Mono.error(new NoSuchElementException(error))))
+                    .flatMap(error -> error(new NoSuchElementException(error))))
         .onStatus(
             HttpStatus::is5xxServerError,
             error -> error(new ServerUnavailableException(SERVER_UNAVAILABLE_EXCEPTION_MESSAGE)))
@@ -64,7 +63,7 @@ public class DriverServiceWebClient {
             response ->
                 response
                     .bodyToMono(String.class)
-                    .flatMap(error -> Mono.error(new NoSuchElementException(error))))
+                    .flatMap(error -> error(new NoSuchElementException(error))))
         .onStatus(
             HttpStatus::is5xxServerError,
             error -> error(new ServerUnavailableException(SERVER_UNAVAILABLE_EXCEPTION_MESSAGE)))
@@ -83,7 +82,7 @@ public class DriverServiceWebClient {
             response ->
                 response
                     .bodyToMono(String.class)
-                    .flatMap(error -> Mono.error(new NoSuchElementException(error))))
+                    .flatMap(error -> error(new NoSuchElementException(error))))
         .onStatus(
             HttpStatus::is5xxServerError,
             error -> error(new ServerUnavailableException(SERVER_UNAVAILABLE_EXCEPTION_MESSAGE)))
@@ -102,7 +101,7 @@ public class DriverServiceWebClient {
             response ->
                 response
                     .bodyToMono(String.class)
-                    .flatMap(error -> Mono.error(new NoSuchElementException(error))))
+                    .flatMap(error -> error(new NoSuchElementException(error))))
         .onStatus(
             HttpStatus::is5xxServerError,
             error -> error(new ServerUnavailableException(SERVER_UNAVAILABLE_EXCEPTION_MESSAGE)))
