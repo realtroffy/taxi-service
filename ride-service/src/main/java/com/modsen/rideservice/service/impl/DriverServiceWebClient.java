@@ -1,6 +1,7 @@
 package com.modsen.rideservice.service.impl;
 
 import com.modsen.rideservice.dto.DriverPageDto;
+import com.modsen.rideservice.dto.DriverRatingDto;
 import com.modsen.rideservice.dto.DriverWithCarDto;
 import com.modsen.rideservice.dto.IdPageDto;
 import com.modsen.rideservice.exception.ServerUnavailableException;
@@ -72,10 +73,11 @@ public class DriverServiceWebClient {
         .block();
   }
 
-  public void updateDriverRatingAfterRide(Long driverId, Double averageDriverRatingByDriverId) {
+  public void updateDriverRatingAfterRide(Long driverId, DriverRatingDto driverRatingDto) {
     webClient
         .put()
-        .uri("/" + driverId + "/" + averageDriverRatingByDriverId)
+        .uri("/" + driverId + "/new-rating")
+        .bodyValue(driverRatingDto)
         .retrieve()
         .onStatus(
             HttpStatus::is4xxClientError,

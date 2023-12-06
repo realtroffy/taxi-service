@@ -2,6 +2,7 @@ package com.modsen.driverservice.controller;
 
 import com.modsen.driverservice.dto.DriverDto;
 import com.modsen.driverservice.dto.DriverPageDto;
+import com.modsen.driverservice.dto.DriverRatingDto;
 import com.modsen.driverservice.dto.IdPageDto;
 import com.modsen.driverservice.service.DriverService;
 import lombok.AllArgsConstructor;
@@ -18,8 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
-import javax.validation.constraints.DecimalMax;
-import javax.validation.constraints.DecimalMin;
 import java.util.List;
 
 import static org.springframework.http.HttpStatus.CREATED;
@@ -57,11 +56,11 @@ public class DriverController {
     return ResponseEntity.noContent().build();
   }
 
-  @PutMapping("/{id}/{rating}")
+  @PutMapping("/{id}/new-rating")
   public ResponseEntity<DriverDto> updateRating(
       @PathVariable("id") long id,
-      @PathVariable("rating") @DecimalMin(value = "0") @DecimalMax(value = "5.0") Double rating) {
-    return ResponseEntity.status(OK).body(driverService.updateRating(id, rating));
+      @Valid @RequestBody DriverRatingDto driverRatingDto) {
+    return ResponseEntity.status(OK).body(driverService.updateRating(id, driverRatingDto));
   }
 
   @DeleteMapping("/{id}")

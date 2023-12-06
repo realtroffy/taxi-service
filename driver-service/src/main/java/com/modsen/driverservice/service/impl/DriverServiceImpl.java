@@ -3,6 +3,7 @@ package com.modsen.driverservice.service.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.modsen.driverservice.dto.DriverDto;
+import com.modsen.driverservice.dto.DriverRatingDto;
 import com.modsen.driverservice.dto.DriverRideDto;
 import com.modsen.driverservice.dto.RideSearchDto;
 import com.modsen.driverservice.exception.DriverWithoutCarAvailableException;
@@ -120,11 +121,11 @@ public class DriverServiceImpl implements DriverService {
 
   @Override
   @Transactional
-  public DriverDto updateRating(long id, double rating) {
+  public DriverDto updateRating(long id, DriverRatingDto driverRatingDto) {
     Driver driver = getDriver(id);
-    driver.setRating(rating);
+    driver.setRating(driverRatingDto.getRating());
     DriverDto driverDto = driverMapper.toDto(driverRepository.save(driver));
-    driverDto.setRating(rating);
+    driverDto.setRating(driverRatingDto.getRating());
     return driverDto;
   }
 

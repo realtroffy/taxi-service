@@ -3,6 +3,7 @@ package com.modsen.rideservice.service.impl;
 import com.modsen.rideservice.dto.BankCardDto;
 import com.modsen.rideservice.dto.CarDto;
 import com.modsen.rideservice.dto.DriverPageDto;
+import com.modsen.rideservice.dto.DriverRatingDto;
 import com.modsen.rideservice.dto.DriverRideDto;
 import com.modsen.rideservice.dto.PassengerDto;
 import com.modsen.rideservice.dto.PassengerRatingFinishDto;
@@ -261,7 +262,7 @@ public class RideServiceImpl implements RideService {
     Double averageDriverRatingByDriverId =
         rideRepository.findAverageDriverRatingByDriverId(ride.getDriverId());
 
-    driverServiceWebClient.updateDriverRatingAfterRide(ride.getDriverId(), averageDriverRatingByDriverId);
+    driverServiceWebClient.updateDriverRatingAfterRide(ride.getDriverId(), DriverRatingDto.builder().rating(averageDriverRatingByDriverId).build());
   }
 
   @Override

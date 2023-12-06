@@ -1,6 +1,7 @@
 package com.modsen.driverservice.service;
 
 import com.modsen.driverservice.dto.DriverDto;
+import com.modsen.driverservice.dto.DriverRatingDto;
 import com.modsen.driverservice.model.Driver;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.springframework.data.domain.Pageable;
@@ -21,7 +22,7 @@ public interface DriverService {
 
     void update(long id, DriverDto driverDto);
 
-    DriverDto updateRating(long id, double rating);
+    DriverDto updateRating(long id, DriverRatingDto driverRatingDto);
 
     void addBankCardToDriver(long driverId, long bankCardId);
 
