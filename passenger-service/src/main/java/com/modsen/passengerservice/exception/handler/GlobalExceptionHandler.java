@@ -11,12 +11,10 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
-import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -43,16 +41,8 @@ public class GlobalExceptionHandler {
   }
 
   @ExceptionHandler(ConstraintViolationException.class)
-  public ResponseEntity<String> handleConstraintViolation(ConstraintViolationException ex) {
-    StringBuilder errorMessage = new StringBuilder("Bad data: ");
-    Set<ConstraintViolation<?>> violations = ex.getConstraintViolations();
-    for (ConstraintViolation<?> violation : violations) {
-      errorMessage
-          .append(violation.getMessage())
-          .append(". ");
-    }
-
-    return new ResponseEntity<>(errorMessage.toString(), HttpStatus.BAD_REQUEST);
+  public ResponseEntity<String> handleConstraintViolation() {
+    return new ResponseEntity<>("Database Constraint Violation", HttpStatus.BAD_REQUEST);
   }
 
   @ExceptionHandler(NoSuchElementException.class)
@@ -76,8 +66,7 @@ public class GlobalExceptionHandler {
   }
 
   @ExceptionHandler(DataIntegrityViolationException.class)
-  public ResponseEntity<Object> handleDataIntegrityViolationException(
-      DataIntegrityViolationException ex) {
-    return ResponseEntity.badRequest().body(ex.getMostSpecificCause().getMessage());
+  public ResponseEntity<Object> handleDataIntegrityViolationException() {
+    return new ResponseEntity<>("Database Constraint Violation", HttpStatus.BAD_REQUEST);
   }
 }

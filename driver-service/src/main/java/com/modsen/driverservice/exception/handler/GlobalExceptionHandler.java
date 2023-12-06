@@ -1,6 +1,8 @@
 package com.modsen.driverservice.exception.handler;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import com.modsen.driverservice.exception.DriverWithoutCarAvailableException;
+import com.modsen.driverservice.exception.RideSearchDtoMappingException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
@@ -11,12 +13,10 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
-import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -43,19 +43,18 @@ public class GlobalExceptionHandler {
   }
 
   @ExceptionHandler(ConstraintViolationException.class)
-  public ResponseEntity<String> handleConstraintViolation(ConstraintViolationException ex) {
-    StringBuilder errorMessage = new StringBuilder("Bad data: ");
-    Set<ConstraintViolation<?>> violations = ex.getConstraintViolations();
-    for (ConstraintViolation<?> violation : violations) {
-      errorMessage.append(violation.getMessage()).append(". ");
-    }
-
-    return new ResponseEntity<>(errorMessage.toString(), HttpStatus.BAD_REQUEST);
+  public ResponseEntity<String> handleConstraintViolation() {
+    return new ResponseEntity<>("Database Constraint Violation", HttpStatus.BAD_REQUEST);
   }
 
   @ExceptionHandler(NoSuchElementException.class)
   public ResponseEntity<Object> handleNoSuchElementException(Exception ex) {
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+  }
+
+  @ExceptionHandler({DriverWithoutCarAvailableException.class, RideSearchDtoMappingException.class})
+  public ResponseEntity<Object> handleCustomException(Exception ex) {
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
   }
 
   @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -74,8 +73,7 @@ public class GlobalExceptionHandler {
   }
 
   @ExceptionHandler(DataIntegrityViolationException.class)
-  public ResponseEntity<Object> handleDataIntegrityViolationException(
-      DataIntegrityViolationException ex) {
-    return ResponseEntity.badRequest().body(ex.getMostSpecificCause().getMessage());
+  public ResponseEntity<Object> handleDataIntegrityViolationException() {
+    return new ResponseEntity<>("Database Constraint Violation", HttpStatus.BAD_REQUEST);
   }
 }

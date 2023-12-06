@@ -1,6 +1,6 @@
 package com.modsen.rideservice.controller;
 
-import com.modsen.rideservice.dto.RatingDto;
+import com.modsen.rideservice.dto.PassengerRatingFinishDto;
 import com.modsen.rideservice.dto.RideDto;
 import com.modsen.rideservice.dto.RidePageDto;
 import com.modsen.rideservice.service.RideService;
@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
 import java.util.List;
 
 import static org.springframework.http.HttpStatus.CREATED;
@@ -35,10 +37,25 @@ public class RideController {
     return ResponseEntity.status(CREATED).body(rideService.order(rideDto));
   }
 
-  @PutMapping("finish/{rideId}")
-  public ResponseEntity<Void> finish(
-      @PathVariable(name = "rideId") Long rideId, @RequestBody @Valid RatingDto ratingDto) {
-    rideService.finish(rideId, ratingDto);
+  @PutMapping("{rideId}/finish")
+  public ResponseEntity<Void> finishByDriver(
+      @PathVariable(name = "rideId") Long rideId,
+      @RequestBody @Valid PassengerRatingFinishDto passengerRatingFinishDto) {
+    rideService.finishByDriver(rideId, passengerRatingFinishDto);
+    return ResponseEntity.noContent().build();
+  }
+
+  @PutMapping("{rideId}/cancel")
+  public ResponseEntity<RideDto> cancelByPassenger(@PathVariable(name = "rideId") Long rideId) {
+    RideDto rideDto = rideService.cancelByPassenger(rideId);
+    return ResponseEntity.status(CREATED).body(rideDto);
+  }
+
+  @PutMapping("{rideId}/{driverRating}")
+  public ResponseEntity<Void> updateDriverRatingAfterFinishRide(
+      @PathVariable(name = "rideId") Long rideId,
+      @PathVariable(name = "driverRating") @Min(value = 0) @Max(value = 5) Integer driverRating) {
+    rideService.updateDriverRatingAfterRide(rideId, driverRating);
     return ResponseEntity.noContent().build();
   }
 

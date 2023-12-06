@@ -1,6 +1,7 @@
 package com.modsen.rideservice.service;
 
 import com.modsen.rideservice.dto.PromoCodeDto;
+import com.modsen.rideservice.model.PromoCode;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
@@ -17,5 +18,5 @@ public interface PromoCodeService {
 
   void update(long id, PromoCodeDto promoCodeDto);
 
-  PromoCodeDto getByName(String name);
+  PromoCode getByName(String name);
 }

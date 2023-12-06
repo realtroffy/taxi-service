@@ -2,6 +2,8 @@ package com.modsen.driverservice.controller;
 
 import com.modsen.driverservice.dto.DriverDto;
 import com.modsen.driverservice.dto.DriverPageDto;
+import com.modsen.driverservice.dto.DriverRatingDto;
+import com.modsen.driverservice.dto.IdPageDto;
 import com.modsen.driverservice.service.DriverService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -17,8 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
-import javax.validation.constraints.DecimalMax;
-import javax.validation.constraints.DecimalMin;
 import java.util.List;
 
 import static org.springframework.http.HttpStatus.CREATED;
@@ -56,11 +56,11 @@ public class DriverController {
     return ResponseEntity.noContent().build();
   }
 
-  @PutMapping("/{id}/{rating}")
+  @PutMapping("/{id}/new-rating")
   public ResponseEntity<DriverDto> updateRating(
       @PathVariable("id") long id,
-      @PathVariable("rating") @DecimalMin(value = "0") @DecimalMax(value = "5.0") Double rating) {
-    return ResponseEntity.status(OK).body(driverService.updateRating(id, rating));
+      @Valid @RequestBody DriverRatingDto driverRatingDto) {
+    return ResponseEntity.status(OK).body(driverService.updateRating(id, driverRatingDto));
   }
 
   @DeleteMapping("/{id}")
@@ -83,9 +83,16 @@ public class DriverController {
     return ResponseEntity.noContent().build();
   }
 
-  @PutMapping("/available")
-  public ResponseEntity<DriverPageDto> orderRandomAvailable(Pageable pageable) {
-    List<DriverDto> driverDtoList = driverService.getRandomAvailable(true, pageable);
+  @PutMapping("/{driverId}/available-true")
+  public ResponseEntity<Void> updateAvailabilityToTrueAfterFinishedRide(
+      @PathVariable("driverId") long driverId) {
+    driverService.updateAvailabilityToTrueAfterFinishedRide(driverId);
+    return ResponseEntity.noContent().build();
+  }
+
+  @PostMapping("/list-id")
+  public ResponseEntity<DriverPageDto> getDriversByIds(@RequestBody IdPageDto idPageDto) {
+    List<DriverDto> driverDtoList = driverService.getDriversByIds(idPageDto.getListId());
     DriverPageDto driverPageDto = DriverPageDto.builder().driverDtoList(driverDtoList).build();
     return ResponseEntity.ok(driverPageDto);
   }

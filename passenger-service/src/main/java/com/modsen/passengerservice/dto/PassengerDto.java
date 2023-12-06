@@ -37,5 +37,5 @@ public class PassengerDto {
   @Max(value = 5, message = "Rating should be between 0 and 5")
   private Double rating;
 
-  List<BankCardDto> bankCards = new ArrayList<>();
+  private List<BankCardDto> bankCards = new ArrayList<>();
 }

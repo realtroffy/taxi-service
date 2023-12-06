@@ -7,9 +7,14 @@ import lombok.ToString;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -66,11 +71,16 @@ public class Ride implements Serializable {
   @Column(name = "passenger_bank_card_id")
   private Long passengerBankCardId;
 
-  @Column(name = "promo_code_id")
-  private Long promoCodeId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @ToString.Exclude
+  private PromoCode promoCode;
 
   @Column(name = "cost", nullable = false)
   private BigDecimal cost;
+
+  @Column(name = "status")
+  @Enumerated(EnumType.STRING)
+  private Status status;
 
   @Override
   public boolean equals(Object o) {

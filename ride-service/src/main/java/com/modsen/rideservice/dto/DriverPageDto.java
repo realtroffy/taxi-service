@@ -9,5 +9,5 @@ import java.util.List;
 @NoArgsConstructor
 public class DriverPageDto {
 
-  private List<DriverDto> driverDtoList;
+  private List<DriverRideDto> driverDtoList;
 }

@@ -8,4 +8,6 @@
     <include file="01-changeset-create-promo-codes-table.xml" relativeToChangelogFile="true"/>
     <include file="10-changeset-create-rides-table.xml" relativeToChangelogFile="true"/>
     <include file="20-changeset-add-foreign-key-rides-promo-codes-table.xml" relativeToChangelogFile="true"/>
+    <include file="30-changeset-create-enum-ride-status.xml" relativeToChangelogFile="true"/>
+    <include file="40-changeset-add-column-ride-status-to-rides-table.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>
