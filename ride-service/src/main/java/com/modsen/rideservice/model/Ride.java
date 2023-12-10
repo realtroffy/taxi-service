@@ -14,7 +14,6 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -30,9 +29,6 @@ import java.util.Objects;
 public class Ride implements Serializable {
 
   private static final long serialVersionUID = 7844962484586042640L;
-  public static final BigDecimal MIN_COST_FOR_RIDE = new BigDecimal("10.0");
-  public static final BigDecimal MAX_COST_FOR_RIDE = new BigDecimal("20.0");
-  public static final int TIME_TO_PASSENGER = 10;
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -69,7 +65,7 @@ public class Ride implements Serializable {
   private LocalDateTime finishTime;
 
   @Column(name = "passenger_bank_card_id")
-  private Long passengerBankCardId;
+  private String passengerBankCardId;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @ToString.Exclude

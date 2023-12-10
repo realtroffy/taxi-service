@@ -25,7 +25,7 @@ public class RideDto {
   private LocalDateTime approvedTime;
   private LocalDateTime startTime;
   private LocalDateTime finishTime;
-  private Long passengerBankCardId;
+  private String passengerBankCardId;
   private String promoCodeName;
   private BigDecimal cost;
   private Status status;

@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -58,8 +59,8 @@ public class RideServiceImpl implements RideService {
   private final PromoCodeService promoCodeService;
   private final RideMapper rideMapper;
   private final MessageChannel toKafkaChannel;
-  @PersistenceContext
-  private final EntityManager entityManager;
+  @PersistenceContext private final EntityManager entityManager;
+
   @Value(value = "${spring.kafka.topic-order-new-ride}")
   private String topicOrderNewRide;
 
@@ -133,20 +134,22 @@ public class RideServiceImpl implements RideService {
       throw new NoSuchElementException(
           "Passenger was not found by such id = " + rideDto.getPassengerId());
     }
-    long count =
+    Optional<BankCardDto> optionalBankCardDto =
         passengerDto.getBankCards().stream()
-            .map(BankCardDto::getId)
-            .filter(id -> id == rideDto.getPassengerBankCardId().intValue())
-            .count();
-    if (count == 0) {
+            .filter(
+                bankCardDto ->
+                    Objects.equals(
+                        bankCardDto.getId(), Long.valueOf(rideDto.getPassengerBankCardId())))
+            .findFirst();
+    if (optionalBankCardDto.isEmpty()) {
       throw new NoSuchElementException(
           "Passenger bank card was not found by such id = " + rideDto.getPassengerBankCardId());
-    }
-    BankCardDto bankCardDto =
-        passengerDto.getBankCards().get(rideDto.getPassengerBankCardId().intValue());
-    if (bankCardDto.getBalance().compareTo(rideDto.getCost()) < 1) {
-      throw new PassengerBankCardNotEnoughMoneyException(
-          "Not enough money on your bank card. Choose another bank card to pay or pay cash");
+    } else {
+      BankCardDto bankCardDto = optionalBankCardDto.get();
+      if (bankCardDto.getBalance().compareTo(rideDto.getCost()) < 1) {
+        throw new PassengerBankCardNotEnoughMoneyException(
+            "Not enough money on your bank card. Choose another bank card to pay or pay cash");
+      }
     }
   }
 
@@ -173,11 +176,7 @@ public class RideServiceImpl implements RideService {
     CarDto carDto = null;
     if (ride.getDriverId() != null) {
       try {
-        carDto =
-            driverServiceWebClient
-                .getDriverById(ride.getDriverId())
-                .getBody()
-                .getCarDto();
+        carDto = driverServiceWebClient.getDriverById(ride.getDriverId()).getBody().getCarDto();
       } catch (NullPointerException exception) {
         throw new DriverServiceException(
             "Driver service return null body or driver without car. May be driver or his car was deleted");
@@ -262,7 +261,9 @@ public class RideServiceImpl implements RideService {
     Double averageDriverRatingByDriverId =
         rideRepository.findAverageDriverRatingByDriverId(ride.getDriverId());
 
-    driverServiceWebClient.updateDriverRatingAfterRide(ride.getDriverId(), DriverRatingDto.builder().rating(averageDriverRatingByDriverId).build());
+    driverServiceWebClient.updateDriverRatingAfterRide(
+        ride.getDriverId(),
+        DriverRatingDto.builder().rating(averageDriverRatingByDriverId).build());
   }
 
   @Override
@@ -298,7 +299,7 @@ public class RideServiceImpl implements RideService {
     rideDtoListWithoutCars.forEach(
         rideWithoutCar -> {
           for (DriverRideDto driverWithCar : driverRideDtoListWithCars) {
-            if (driverWithCar.getId()==rideWithoutCar.getDriverId()) {
+            if (driverWithCar.getId() == rideWithoutCar.getDriverId()) {
               rideWithoutCar.setCarDto(driverWithCar.getCarDto());
             }
           }

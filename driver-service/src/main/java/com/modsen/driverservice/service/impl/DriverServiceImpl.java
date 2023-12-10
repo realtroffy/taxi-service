@@ -109,7 +109,7 @@ public class DriverServiceImpl implements DriverService {
   @Override
   @Transactional
   public void update(long id, DriverDto driverDto) {
-    if (driverDto.isAvailable() && driverDto.getCarDto() == null) {
+    if (Boolean.TRUE.equals(driverDto.getIsAvailable()) && driverDto.getCarDto() == null) {
       throw new DriverWithoutCarAvailableException(
           "Driver could not switch status to available without car");
     }

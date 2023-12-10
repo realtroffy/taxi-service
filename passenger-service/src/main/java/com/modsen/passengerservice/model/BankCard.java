@@ -36,13 +36,13 @@ public class BankCard implements Serializable {
   private Passenger passenger;
 
   @Column(name = "card_number", nullable = false, unique = true)
-  private Long cardNumber;
+  private String cardNumber;
 
   @Column(name = "balance", nullable = false)
   private BigDecimal balance;
 
   @Column(name = "is_default", nullable = false)
-  private boolean isDefault;
+  private Boolean isDefault;
 
   @Override
   public boolean equals(Object o) {
