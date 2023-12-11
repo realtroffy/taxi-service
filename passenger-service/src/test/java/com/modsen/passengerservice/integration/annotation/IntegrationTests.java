@@ -1,5 +1,6 @@
 package com.modsen.passengerservice.integration.annotation;
 
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestConstructor;
@@ -17,6 +18,7 @@ import static org.springframework.test.context.TestConstructor.AutowireMode.ALL;
 @ActiveProfiles("test")
 @SpringBootTest
 @Transactional
+@AutoConfigureMockMvc
 @TestConstructor(autowireMode = ALL)
 public @interface IntegrationTests {
 }
