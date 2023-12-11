@@ -20,5 +20,5 @@ public class BankCardDto {
 
   @PositiveOrZero @NotNull private BigDecimal balance;
 
-  private Boolean isDefault;
+  private boolean isDefault;
 }

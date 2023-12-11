@@ -94,7 +94,7 @@ public class DriverServiceImpl implements DriverService {
   @Transactional
   public DriverDto save(DriverDto driverDto) {
     Driver driver = driverMapper.toEntity(driverDto);
-    driver.setAvailable(DEFAULT_AVAILABILITY_NEW_DRIVER);
+    driver.setIsAvailable(DEFAULT_AVAILABILITY_NEW_DRIVER);
     driver.setRating(DEFAULT_RATING_NEW_DRIVER);
     Driver createdDriver = driverRepository.save(driver);
     return driverMapper.toDto(createdDriver);
@@ -196,7 +196,7 @@ public class DriverServiceImpl implements DriverService {
     Optional<Driver> randomAvailableDriver = driverRepository.findRandomAvailable();
     if (randomAvailableDriver.isPresent()) {
       Driver driver = randomAvailableDriver.get();
-      driver.setAvailable(false);
+      driver.setIsAvailable(false);
       DriverDto driverDto = driverMapper.toDto(driver);
       DriverRideDto driverRideDto = driverRideDtoMapper.toDriverRideDto(driverDto);
       driverRideDto.setRideId(rideSearchDto.getRideId());
@@ -218,7 +218,7 @@ public class DriverServiceImpl implements DriverService {
   @Transactional
   public DriverDto updateAvailabilityToTrueAfterFinishedRide(long driverId) {
     Driver driver = getDriver(driverId);
-    driver.setAvailable(true);
+    driver.setIsAvailable(true);
     driverRepository.save(driver);
     return driverMapper.toDto(driver);
   }

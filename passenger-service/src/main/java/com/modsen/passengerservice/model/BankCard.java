@@ -42,7 +42,7 @@ public class BankCard implements Serializable {
   private BigDecimal balance;
 
   @Column(name = "is_default", nullable = false)
-  private Boolean isDefault;
+  private boolean isDefault;
 
   @Override
   public boolean equals(Object o) {

@@ -7,6 +7,8 @@
 
     <include file="01-changeset-create-drivers-table.xml" relativeToChangelogFile="true"/>
     <include file="10-changeset-create-bank-cards-table.xml" relativeToChangelogFile="true"/>
+    <include file="11-changeset-change-type-card-number-to-varchar.xml" relativeToChangelogFile="true"/>
+    <include file="12-changeset-add-constraint-check-card-number.xml" relativeToChangelogFile="true"/>
     <include file="20-changeset-add-foreign-key-bank-cards-drivers-table.xml" relativeToChangelogFile="true"/>
     <include file="30-changeset-add-unique-constraint-is_default-driver_id-bank-cards-table.xml"
              relativeToChangelogFile="true"/>

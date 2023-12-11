@@ -18,5 +18,5 @@ import static org.springframework.test.context.TestConstructor.AutowireMode.ALL;
 @SpringBootTest
 @Transactional
 @TestConstructor(autowireMode = ALL)
-public @interface IT {
+public @interface IntegrationTests {
 }

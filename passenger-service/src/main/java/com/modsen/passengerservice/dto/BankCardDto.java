@@ -33,5 +33,5 @@ public class BankCardDto {
   @NotNull
   private BigDecimal balance;
 
-  private Boolean isDefault;
+  private boolean isDefault;
 }

@@ -1,13 +1,13 @@
 package com.modsen.passengerservice.integration.testbase;
 
-import com.modsen.passengerservice.integration.annotation.IT;
+import com.modsen.passengerservice.integration.annotation.IntegrationTests;
 import org.junit.jupiter.api.BeforeAll;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-@IT
+@IntegrationTests
 @Sql("classpath:db/data.sql")
 public abstract class IntegrationTestBase {
 
