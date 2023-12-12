@@ -22,7 +22,7 @@ import java.math.BigDecimal;
 public class PassengerAfterRideDto {
 
   @NotNull @Positive private BigDecimal rideCost;
-  private Long passengerBankCardId;
+  private String passengerBankCardId;
 
   @DecimalMin(value = "0")
   @DecimalMax(value = "5.0")

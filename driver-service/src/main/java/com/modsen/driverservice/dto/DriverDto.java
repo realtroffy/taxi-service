@@ -35,7 +35,6 @@ public class DriverDto {
   @Max(value = 5, message = "{driver.rating.min-max.error}")
   private Double rating;
 
-  @JsonProperty(value = "isAvailable")
   private boolean isAvailable;
 
   private CarDto carDto;

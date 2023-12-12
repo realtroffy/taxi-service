@@ -1,15 +1,23 @@
 package com.modsen.passengerservice.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
-
-import javax.validation.constraints.Digits;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Positive;
 import javax.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@EqualsAndHashCode
 public class BankCardDto {
 
   private Long id;
@@ -17,14 +25,13 @@ public class BankCardDto {
   @NotNull
   private Long passengerId;
 
-  @Digits(integer = 16, fraction = 0, message = "The number must be an integer and consist of 16 digits")
   @NotNull
-  private Long cardNumber;
+  @Pattern(regexp = "[\\d]{16}", message = "{card.number.error}")
+  private String cardNumber;
 
   @PositiveOrZero
   @NotNull
   private BigDecimal balance;
 
-  @JsonProperty("isDefault")
   private boolean isDefault;
 }

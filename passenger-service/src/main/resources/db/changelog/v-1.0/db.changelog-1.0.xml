@@ -7,7 +7,10 @@
 
     <include file="01-changeset-create-passengers-table.xml" relativeToChangelogFile="true"/>
     <include file="10-changeset-create-bank-cards-table.xml" relativeToChangelogFile="true"/>
+    <include file="11-changeset-change-type-card-number-to-varchar.xml" relativeToChangelogFile="true"/>
+    <include file="12-changeset-add-constraint-check-card-number.xml" relativeToChangelogFile="true"/>
     <include file="20-changeset-add-foreign-key-bank-cards-table.xml" relativeToChangelogFile="true"/>
-    <include file="30-changeset-add-unique-constraint-is_default-passenger_id-bank-cards-table.xml" relativeToChangelogFile="true"/>
+    <include file="30-changeset-add-unique-constraint-is_default-passenger_id-bank-cards-table.xml"
+             relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

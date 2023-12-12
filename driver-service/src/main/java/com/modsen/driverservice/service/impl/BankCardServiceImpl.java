@@ -5,7 +5,9 @@ import com.modsen.driverservice.mapper.BankCardMapper;
 import com.modsen.driverservice.model.BankCard;
 import com.modsen.driverservice.repository.BankCardRepository;
 import com.modsen.driverservice.service.BankCardService;
+import com.modsen.driverservice.service.DriverService;
 import lombok.AllArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,13 +17,15 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
-@AllArgsConstructor
+@AllArgsConstructor(onConstructor_ = {@Lazy})
 public class BankCardServiceImpl implements BankCardService {
 
     private static final String NO_SUCH_BANK_CARD_EXCEPTION_MESSAGE =
             "Bank card was not found by id = ";
     private final BankCardMapper bankCardMapper;
     private final BankCardRepository bankCardRepository;
+    @Lazy
+    private final DriverService driverService;
 
     @Override
     @Transactional(readOnly = true)
@@ -47,6 +51,7 @@ public class BankCardServiceImpl implements BankCardService {
     @Override
     @Transactional
     public BankCardDto save(BankCardDto bankCardDto) {
+        driverService.getById(bankCardDto.getDriverId());
         BankCard bankCard = bankCardMapper.toEntity(bankCardDto);
         BankCard createdBankCard = bankCardRepository.save(bankCard);
         return bankCardMapper.toDto(createdBankCard);

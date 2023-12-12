@@ -1,10 +1,9 @@
 package com.modsen.driverservice.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
-import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Positive;
 import javax.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
@@ -15,15 +14,11 @@ public class BankCardDto {
   private Long id;
   @Positive @NotNull private Long driverId;
 
-  @Digits(
-      integer = 16,
-      fraction = 0,
-      message = "{card.number.error}")
+  @Pattern(regexp = "[\\d]{16}", message = "{card.number.error}")
   @NotNull
-  private Long cardNumber;
+  private String cardNumber;
 
   @PositiveOrZero @NotNull private BigDecimal balance;
 
-  @JsonProperty(value = "isDefault")
   private boolean isDefault;
 }
