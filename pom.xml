@@ -38,7 +38,6 @@
         <maven.jacoco.plugin.vesrion>0.8.8</maven.jacoco.plugin.vesrion>
         <rest-assured.version>4.1.1</rest-assured.version>
         <hamcrest-all.version>1.3</hamcrest-all.version>
-
     </properties>
 
     <dependencyManagement>
