@@ -4,6 +4,7 @@ import com.modsen.driverservice.dto.DriverDto;
 import com.modsen.driverservice.dto.DriverRatingDto;
 import com.modsen.driverservice.model.Driver;
 import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.Topology;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
@@ -32,5 +33,5 @@ public interface DriverService {
 
     List<DriverDto> getDriversByIds(List<Long> listId);
 
-    void getAvailableRandomDriverIfExistAndChangeAvailabilityToFalse(StreamsBuilder kStreamBuilder);
+    Topology getAvailableRandomDriverIfExistAndChangeAvailabilityToFalse(StreamsBuilder kStreamBuilder);
 }

@@ -12,5 +12,6 @@ public interface CarMapper {
   CarDto toDto(Car car);
 
   @Mapping(source = "driverId", target = "driver.id")
+  @Mapping(source = "driverId", target = "id")
   Car toEntity(CarDto carDto);
 }
