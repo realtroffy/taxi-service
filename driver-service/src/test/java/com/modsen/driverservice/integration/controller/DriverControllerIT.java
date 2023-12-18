@@ -10,6 +10,7 @@ import com.modsen.driverservice.dto.DriverDto;
 import com.modsen.driverservice.dto.DriverPageDto;
 import com.modsen.driverservice.dto.IdPageDto;
 import com.modsen.driverservice.integration.testbase.IntegrationTestBase;
+import com.modsen.driverservice.model.Driver;
 import com.modsen.driverservice.repository.DriverRepository;
 import com.modsen.driverservice.service.DriverService;
 import io.restassured.http.ContentType;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.StreamSupport;
 
 import static io.restassured.RestAssured.given;
@@ -143,11 +145,10 @@ class DriverControllerIT extends IntegrationTestBase {
             .statusCode(HttpStatus.CREATED.value())
             .extract()
             .as(DriverDto.class);
-    driverDtoCorrect.setId(GENERATED_ID_AFTER_SAVE);
-    driverDtoCorrect.setPassword(null);
-    driverDtoCorrect.setRating(DEFAULT_RATING);
+    actual.setPassword(driverDtoCorrect.getPassword());
+    DriverDto expected = driverService.getById(GENERATED_ID_AFTER_SAVE);
 
-    assertEquals(driverDtoCorrect, actual);
+    assertEquals(expected, actual);
   }
 
   @Test

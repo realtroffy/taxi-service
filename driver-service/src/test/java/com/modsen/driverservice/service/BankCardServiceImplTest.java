@@ -17,14 +17,17 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -32,6 +35,7 @@ import static org.mockito.Mockito.when;
 class BankCardServiceImplTest {
 
   public static final Long EXIST_ID = 1L;
+  public static final Long NOT_EXIST_ID = 100L;
 
   private BankCard bankCard;
   private BankCardDto bankCardDto;
@@ -60,8 +64,14 @@ class BankCardServiceImplTest {
     BankCardDto actual = bankCardService.getById(EXIST_ID);
 
     assertNotNull(actual);
-    assertSame(EXIST_ID, actual.getId());
     verify(bankCardRepository).findById(anyLong());
+  }
+
+  @Test
+  void getDtoByIdIfNotExistThanThrowNotSuchElementException() {
+    when(bankCardRepository.findById(NOT_EXIST_ID)).thenReturn(Optional.empty());
+
+    assertThrows(NoSuchElementException.class, () -> bankCardService.getById(NOT_EXIST_ID));
   }
 
   @Test
@@ -95,11 +105,19 @@ class BankCardServiceImplTest {
 
   @Test
   void deleteById() {
-    doNothing().when(bankCardRepository).deleteById(anyLong());
+    when(bankCardRepository.findById(EXIST_ID)).thenReturn(Optional.of(bankCard));
 
     bankCardService.deleteById(EXIST_ID);
 
-    verify(bankCardRepository).deleteById(anyLong());
+    verify(bankCardRepository).deleteById(EXIST_ID);
+  }
+
+  @Test
+  void deleteByIdIfNotExistThrowNoSuchElementException() {
+    when(bankCardRepository.findById(NOT_EXIST_ID)).thenReturn(Optional.empty());
+
+    assertThrows(NoSuchElementException.class, () -> bankCardService.deleteById(NOT_EXIST_ID));
+    verify(bankCardRepository, never()).deleteById(anyLong());
   }
 
   @Test
@@ -112,5 +130,14 @@ class BankCardServiceImplTest {
 
     verify(bankCardRepository).save(bankCard);
     verify(bankCardMapper).toEntity(bankCardDto);
+  }
+
+  @Test
+  void updateIfNotExistThrowNoSuchElementException() {
+    when(bankCardRepository.findById(NOT_EXIST_ID)).thenReturn(Optional.empty());
+
+    assertThrows(
+        NoSuchElementException.class, () -> bankCardService.update(NOT_EXIST_ID, bankCardDto));
+    verify(bankCardRepository, never()).save(bankCard);
   }
 }

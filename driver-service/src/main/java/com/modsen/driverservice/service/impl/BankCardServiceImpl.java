@@ -60,6 +60,7 @@ public class BankCardServiceImpl implements BankCardService {
     @Override
     @Transactional
     public void deleteById(long id) {
+        getBankCard(id);
         bankCardRepository.deleteById(id);
     }
 

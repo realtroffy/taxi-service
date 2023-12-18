@@ -17,14 +17,16 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -32,6 +34,7 @@ import static org.mockito.Mockito.when;
 class CarServiceImplTest {
 
   public static final Long EXIST_ID = 1L;
+  public static final Long NOT_EXIST_ID = 100L;
 
   private Car car;
   private CarDto carDto;
@@ -61,6 +64,13 @@ class CarServiceImplTest {
     assertNotNull(actual);
     assertSame(EXIST_ID, actual.getDriverId());
     verify(carRepository).findById(anyLong());
+  }
+
+  @Test
+  void getDtoByIdIfNotExistThanThrowNotSuchElementException() {
+    when(carRepository.findById(NOT_EXIST_ID)).thenReturn(Optional.empty());
+
+    assertThrows(NoSuchElementException.class, () -> carService.getById(NOT_EXIST_ID));
   }
 
   @Test
@@ -94,11 +104,19 @@ class CarServiceImplTest {
 
   @Test
   void deleteById() {
-    doNothing().when(carRepository).deleteById(anyLong());
+    when(carRepository.findById(EXIST_ID)).thenReturn(Optional.of(car));
 
     carService.deleteById(EXIST_ID);
 
     verify(carRepository).deleteById(anyLong());
+  }
+
+  @Test
+  void deleteByIdIfNotExistThrowNoSuchElementException() {
+    when(carRepository.findById(NOT_EXIST_ID)).thenReturn(Optional.empty());
+
+    assertThrows(NoSuchElementException.class, () -> carService.deleteById(NOT_EXIST_ID));
+    verify(carRepository, never()).deleteById(anyLong());
   }
 
   @Test
@@ -111,5 +129,13 @@ class CarServiceImplTest {
 
     verify(carRepository).save(car);
     verify(carMapper).toEntity(carDto);
+  }
+
+  @Test
+  void updateIfNotExistThrowNoSuchElementException() {
+    carDto.setDriverId(NOT_EXIST_ID);
+
+    assertThrows(NoSuchElementException.class, () -> carService.update(carDto));
+    verify(carRepository, never()).save(car);
   }
 }

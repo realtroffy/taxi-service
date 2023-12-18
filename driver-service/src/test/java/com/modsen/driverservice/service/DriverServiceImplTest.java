@@ -2,6 +2,7 @@ package com.modsen.driverservice.service;
 
 import com.modsen.driverservice.dto.DriverDto;
 import com.modsen.driverservice.dto.DriverRatingDto;
+import com.modsen.driverservice.exception.DriverWithoutCarAvailableException;
 import com.modsen.driverservice.mapper.DriverMapper;
 import com.modsen.driverservice.model.Driver;
 import com.modsen.driverservice.repository.DriverRepository;
@@ -18,15 +19,17 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -35,6 +38,7 @@ class DriverServiceImplTest {
 
   public static final Long EXIST_ID = 1L;
   public static final Double UPDATED_RATING = 3.0;
+  public static final Long NOT_EXIST_ID = 100L;
 
   private Driver driver;
   private DriverDto driverDto;
@@ -64,6 +68,13 @@ class DriverServiceImplTest {
     assertNotNull(actual);
     assertSame(EXIST_ID, actual.getId());
     verify(driverRepository).findById(anyLong());
+  }
+
+  @Test
+  void getDtoByIdIfNotExistThanThrowNotSuchElementException() {
+    when(driverRepository.findById(NOT_EXIST_ID)).thenReturn(Optional.empty());
+
+    assertThrows(NoSuchElementException.class, () -> driverService.getById(NOT_EXIST_ID));
   }
 
   @Test
@@ -99,15 +110,23 @@ class DriverServiceImplTest {
 
   @Test
   void deleteDriverById() {
-    doNothing().when(driverRepository).deleteById(anyLong());
+    when(driverRepository.findById(EXIST_ID)).thenReturn(Optional.of(driver));
 
-    driverService.deleteById(anyLong());
+    driverService.deleteById(EXIST_ID);
 
-    verify(driverRepository).deleteById(anyLong());
+    verify(driverRepository).deleteById(EXIST_ID);
   }
 
   @Test
-  void updatePassenger() {
+  void deleteByIdIfNotExistThrowNoSuchElementException() {
+    when(driverRepository.findById(NOT_EXIST_ID)).thenReturn(Optional.empty());
+
+    assertThrows(NoSuchElementException.class, () -> driverService.deleteById(NOT_EXIST_ID));
+    verify(driverRepository, never()).deleteById(anyLong());
+  }
+
+  @Test
+  void updateDriver() {
     when(driverRepository.findById(anyLong())).thenReturn(Optional.of(driver));
     when(driverMapper.toEntity(driverDto)).thenReturn(driver);
     when(driverRepository.save(driver)).thenReturn(driver);
@@ -116,6 +135,24 @@ class DriverServiceImplTest {
 
     verify(driverRepository).save(driver);
     verify(driverMapper).toEntity(driverDto);
+  }
+
+  @Test
+  void updateIfNotExistThrowNoSuchElementException() {
+    driverDto.setId(NOT_EXIST_ID);
+
+    assertThrows(NoSuchElementException.class, () -> driverService.update(NOT_EXIST_ID, driverDto));
+    verify(driverRepository, never()).save(driver);
+  }
+
+  @Test
+  void updateIfCarIsNullAndAvailableTrueThanThrowDriverWithoutCarAvailableException() {
+    driverDto.setIsAvailable(true);
+
+    assertThrows(
+        DriverWithoutCarAvailableException.class,
+        () -> driverService.update(NOT_EXIST_ID, driverDto));
+    verify(driverRepository, never()).save(driver);
   }
 
   @Test
@@ -135,6 +172,16 @@ class DriverServiceImplTest {
   }
 
   @Test
+  void updateRatingIfNotExistThanThrowNoSuchElementException() {
+    when(driverRepository.findById(NOT_EXIST_ID)).thenReturn(Optional.empty());
+
+    assertThrows(
+        NoSuchElementException.class,
+        () -> driverService.updateRating(NOT_EXIST_ID, driverRatingDto));
+    verify(driverRepository, never()).save(driver);
+  }
+
+  @Test
   void updateAvailabilityToTrueAfterFinishedRide() {
     when(driverRepository.findById(anyLong())).thenReturn(Optional.of(driver));
     when(driverRepository.save(any(Driver.class))).thenReturn(driver);
@@ -145,6 +192,16 @@ class DriverServiceImplTest {
     verify(driverRepository).findById(anyLong());
     verify(driverRepository).save(any(Driver.class));
     verify(driverMapper).toDto(any(Driver.class));
+  }
+
+  @Test
+  void updateAvailabilityToTrueAfterFinishedRideIfNotExistThrowNoSuchElementException() {
+    when(driverRepository.findById(NOT_EXIST_ID)).thenReturn(Optional.empty());
+
+    assertThrows(
+        NoSuchElementException.class,
+        () -> driverService.updateAvailabilityToTrueAfterFinishedRide(NOT_EXIST_ID));
+    verify(driverRepository, never()).save(driver);
   }
 
   @Test

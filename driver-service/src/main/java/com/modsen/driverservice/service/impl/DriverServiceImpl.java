@@ -104,6 +104,7 @@ public class DriverServiceImpl implements DriverService {
   @Override
   @Transactional
   public void deleteById(long id) {
+    getDriver(id);
     driverRepository.deleteById(id);
   }
 
