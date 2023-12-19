@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Branched;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
@@ -103,6 +104,7 @@ public class DriverServiceImpl implements DriverService {
   @Override
   @Transactional
   public void deleteById(long id) {
+    getDriver(id);
     driverRepository.deleteById(id);
   }
 
@@ -159,7 +161,7 @@ public class DriverServiceImpl implements DriverService {
 
   @Transactional
   @Autowired
-  public void getAvailableRandomDriverIfExistAndChangeAvailabilityToFalse(
+  public Topology getAvailableRandomDriverIfExistAndChangeAvailabilityToFalse(
       StreamsBuilder kStreamBuilder) {
     KStream<String, String> stream =
         kStreamBuilder.stream(orderNewRideTopic, Consumed.with(Serdes.String(), Serdes.String()));
@@ -186,6 +188,8 @@ public class DriverServiceImpl implements DriverService {
                     driverStream.to(
                         notFoundDriverTopic, Produced.with(Serdes.String(), driverRideDtoSerde()))))
         .noDefaultBranch();
+
+    return kStreamBuilder.build();
   }
 
   private Serde<DriverRideDto> driverRideDtoSerde() {
