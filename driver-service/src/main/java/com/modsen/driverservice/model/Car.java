@@ -8,7 +8,6 @@ import lombok.ToString;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
 import javax.persistence.MapsId;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
@@ -38,7 +37,6 @@ public class Car implements Serializable {
 
   @OneToOne
   @MapsId
-  @JoinColumn(name = "driver_id")
   @ToString.Exclude
   private Driver driver;
 

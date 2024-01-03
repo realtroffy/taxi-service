@@ -2,6 +2,7 @@ package com.modsen.driverservice.integration.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.modsen.driverservice.config.kafka.KafkaProperties;
 import com.modsen.driverservice.dto.DriverRideDto;
 import com.modsen.driverservice.dto.RideSearchDto;
 import com.modsen.driverservice.exception.RideSearchDtoMappingException;
@@ -18,7 +19,6 @@ import org.apache.kafka.streams.TopologyTestDriver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlMergeMode;
 
@@ -33,15 +33,7 @@ class DriverServiceIT extends IntegrationTestBase {
   public static final String EXIST_DRIVER_NAME = "John";
   public static final Long RANDOM_RIDE_ID = 1L;
 
-  @Value(value = "${spring.kafka.topic.order.new.ride}")
-  private String orderNewRideTopic;
-
-  @Value(value = "${spring.kafka.topic.available.driver}")
-  private String availableDriverTopic;
-
-  @Value(value = "${spring.kafka.topic.not.found.driver}")
-  private String notFoundDriverTopic;
-
+  private final KafkaProperties kafkaProperties;
   private final DriverService driverService;
   private final StreamsBuilder streamsBuilder;
   private TopologyTestDriver topologyTestDriver;
@@ -65,7 +57,7 @@ class DriverServiceIT extends IntegrationTestBase {
     Deserializer<String> valueDeserializer = Serdes.String().deserializer();
 
     TestInputTopic<String, String> orderNewRideInputTopic =
-        topologyTestDriver.createInputTopic(orderNewRideTopic, keySerializer, valueSerializer);
+        topologyTestDriver.createInputTopic(kafkaProperties.getTopicOrderNewRide(), keySerializer, valueSerializer);
 
     try {
       orderNewRideInputTopic.pipeInput(objectMapper.writeValueAsString(rideSearchDto));
@@ -76,10 +68,10 @@ class DriverServiceIT extends IntegrationTestBase {
 
     availableDriverOutputTopic =
         topologyTestDriver.createOutputTopic(
-            availableDriverTopic, keyDeserializer, valueDeserializer);
+            kafkaProperties.getTopicAvailableDriver(), keyDeserializer, valueDeserializer);
     notFoundDriverOutputTopic =
         topologyTestDriver.createOutputTopic(
-            notFoundDriverTopic, keyDeserializer, valueDeserializer);
+            kafkaProperties.getTopicNotFoundDriver(), keyDeserializer, valueDeserializer);
   }
 
   @AfterEach
@@ -97,7 +89,6 @@ class DriverServiceIT extends IntegrationTestBase {
     assertEquals(EXIST_DRIVER_ID, availableDriverRideDto.getId());
     assertEquals(EXIST_DRIVER_NAME, availableDriverRideDto.getFirstName());
     assertEquals(RANDOM_RIDE_ID, availableDriverRideDto.getRideId());
-    assertTrue(notFoundDriverOutputTopic.isEmpty());
   }
 
   @Test

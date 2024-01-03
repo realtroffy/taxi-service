@@ -2,6 +2,7 @@ package com.modsen.driverservice.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.modsen.driverservice.config.kafka.KafkaProperties;
 import com.modsen.driverservice.dto.DriverDto;
 import com.modsen.driverservice.dto.DriverRatingDto;
 import com.modsen.driverservice.dto.DriverRideDto;
@@ -26,7 +27,6 @@ import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
@@ -53,15 +53,7 @@ public class DriverServiceImpl implements DriverService {
   private final DriverMapper driverMapper;
   private final DriverDtoToDriverRideDtoMapper driverRideDtoMapper;
   private final ObjectMapper objectMapper;
-
-  @Value(value = "${spring.kafka.topic.order.new.ride}")
-  private String orderNewRideTopic;
-
-  @Value(value = "${spring.kafka.topic.available.driver}")
-  private String availableDriverTopic;
-
-  @Value(value = "${spring.kafka.topic.not.found.driver}")
-  private String notFoundDriverTopic;
+  private final KafkaProperties kafkaProperties;
 
   @Override
   @Transactional(readOnly = true)
@@ -164,7 +156,9 @@ public class DriverServiceImpl implements DriverService {
   public Topology getAvailableRandomDriverIfExistAndChangeAvailabilityToFalse(
       StreamsBuilder kStreamBuilder) {
     KStream<String, String> stream =
-        kStreamBuilder.stream(orderNewRideTopic, Consumed.with(Serdes.String(), Serdes.String()));
+        kStreamBuilder.stream(
+            kafkaProperties.getTopicOrderNewRide(),
+            Consumed.with(Serdes.String(), Serdes.String()));
 
     KStream<String, RideSearchDto> rideSearchDtoKStream =
         stream.mapValues(this::getRideSearchDtoFromString);
@@ -179,14 +173,15 @@ public class DriverServiceImpl implements DriverService {
             Branched.withConsumer(
                 driverStream ->
                     driverStream.to(
-                        availableDriverTopic,
+                        kafkaProperties.getTopicAvailableDriver(),
                         Produced.with(Serdes.String(), driverRideDtoSerde()))))
         .branch(
             (string, driverRideDto) -> driverRideDto.getId() == null,
             Branched.withConsumer(
                 driverStream ->
                     driverStream.to(
-                        notFoundDriverTopic, Produced.with(Serdes.String(), driverRideDtoSerde()))))
+                        kafkaProperties.getTopicNotFoundDriver(),
+                        Produced.with(Serdes.String(), driverRideDtoSerde()))))
         .noDefaultBranch();
 
     return kStreamBuilder.build();
@@ -201,6 +196,7 @@ public class DriverServiceImpl implements DriverService {
     if (randomAvailableDriver.isPresent()) {
       Driver driver = randomAvailableDriver.get();
       driver.setIsAvailable(false);
+      driverRepository.save(driver);
       DriverDto driverDto = driverMapper.toDto(driver);
       DriverRideDto driverRideDto = driverRideDtoMapper.toDriverRideDto(driverDto);
       driverRideDto.setRideId(rideSearchDto.getRideId());
