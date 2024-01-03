@@ -191,10 +191,10 @@ class DriverControllerIT extends IntegrationTestBase {
         .delete(DRIVER_URL + ID_VARIABLE)
         .then()
         .statusCode(HttpStatus.NO_CONTENT.value());
-    long actualCountCarsAfterDeleting =
+    long actualCountDriversAfterDeleting =
         StreamSupport.stream(driverRepository.findAll().spliterator(), false).count();
 
-    assertEquals(COUNT_EXISTED_ENTITY - 1, actualCountCarsAfterDeleting);
+    assertEquals(COUNT_EXISTED_ENTITY - 1, actualCountDriversAfterDeleting);
   }
 
   @Test
@@ -205,10 +205,10 @@ class DriverControllerIT extends IntegrationTestBase {
         .delete(DRIVER_URL + ID_VARIABLE)
         .then()
         .statusCode(HttpStatus.NOT_FOUND.value());
-    long actualCountCarAfterDeleting =
+    long actualCountDriversAfterDeleting =
         StreamSupport.stream(driverRepository.findAll().spliterator(), false).count();
 
-    assertEquals(COUNT_EXISTED_ENTITY, actualCountCarAfterDeleting);
+    assertEquals(COUNT_EXISTED_ENTITY, actualCountDriversAfterDeleting);
   }
 
   @Test

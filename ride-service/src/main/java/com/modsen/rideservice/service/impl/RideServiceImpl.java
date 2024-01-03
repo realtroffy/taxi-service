@@ -102,6 +102,7 @@ public class RideServiceImpl implements RideService {
       ride.setDriverId(driverRideDto.getId());
       ride.setApprovedTime(LocalDateTime.now());
       ride.setStartTime(LocalDateTime.now());
+      rideRepository.save(ride);
     } else {
       updateDriverAvailabilityAfterRide(ride);
     }
@@ -269,20 +270,32 @@ public class RideServiceImpl implements RideService {
   @Override
   @Transactional(readOnly = true)
   public List<RideDto> getAll(Pageable pageable) {
-    List<RideDto> rideDtoList = getAllRidesWithoutCars(pageable);
+    List<RideDto> rideDtoListWithDriver = getAllRidesWithDriver(pageable);
 
-    List<Long> driversIdList = getListIdsFromRidesWhereExistDriverId(rideDtoList);
+    List<Long> driversIdList = getListIdsFromRidesWhereExistDriverId(rideDtoListWithDriver);
 
     ResponseEntity<DriverPageDto> driverPageWithCars =
         getDriversFromDriverServiceByListIds(driversIdList);
 
-    setCarDtoToRides(rideDtoList, driverPageWithCars);
+    setCarDtoToRides(rideDtoListWithDriver, driverPageWithCars);
 
-    return rideDtoList;
+    List<RideDto> rideDtoListWithoutDriver = getAllRidesWithoutDriver(pageable);
+
+    rideDtoListWithDriver.addAll(rideDtoListWithoutDriver);
+
+    return rideDtoListWithDriver;
   }
 
-  private List<RideDto> getAllRidesWithoutCars(Pageable pageable) {
+  private List<RideDto> getAllRidesWithoutDriver(Pageable pageable) {
     return rideRepository.findAll(pageable).getContent().stream()
+            .filter(ride -> ride.getDriverId() == null)
+            .map(rideMapper::toDto)
+            .collect(Collectors.toList());
+  }
+
+  private List<RideDto> getAllRidesWithDriver(Pageable pageable) {
+    return rideRepository.findAll(pageable).getContent().stream()
+        .filter(ride -> ride.getDriverId() != null)
         .map(rideMapper::toDto)
         .collect(Collectors.toList());
   }
@@ -321,19 +334,22 @@ public class RideServiceImpl implements RideService {
   @Override
   @Transactional
   public void deleteById(long id) {
+    getRide(id);
     rideRepository.deleteById(id);
   }
 
   @Override
   @Transactional
   public void update(long id, RideDto rideDto) {
+    getRide(id);
+    PromoCode promoCode = null;
     if (rideDto.getPromoCodeName() != null) {
-      promoCodeService.getByName(rideDto.getPromoCodeName());
+      promoCode = promoCodeService.getByName(rideDto.getPromoCodeName());
     }
     checkDateOrder(rideDto);
-    getRide(id);
     rideDto.setId(id);
     Ride ride = rideMapper.toEntity(rideDto);
+    ride.setPromoCode(promoCode);
     rideRepository.save(ride);
   }
 
