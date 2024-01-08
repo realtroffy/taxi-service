@@ -15,13 +15,13 @@ public class WebClientConfig {
     private String passengerServiceUrl;
 
     @Bean
-    @Profile("dev")
+    @Profile("docker")
     public WebClient driverWebClient(){
         return WebClient.builder().baseUrl(driverServiceUrl).build();
     }
 
     @Bean
-    @Profile("dev")
+    @Profile("docker")
     public WebClient passengerWebClient(){
         return WebClient.builder().baseUrl(passengerServiceUrl).build();
     }
