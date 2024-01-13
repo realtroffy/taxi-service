@@ -35,7 +35,6 @@ services:
     environment:
       - POSTGRES_USER=root
       - POSTGRES_PASSWORD=123
-      - POSTGRES_MULTIPLE_DATABASES=rides,passengers,drivers
     volumes:
       - ./docker-postgresql-multiple-databases:/docker-entrypoint-initdb.d
       - postgres-data:/var/lib/postgresql/data
@@ -49,8 +48,10 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/passengers
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=123
+      - eureka.client.serviceUrl.defaultZone=http://service-registry:8761/eureka/
     depends_on:
       - postgres
+      - api-gateway
 
   driver-service:
     build: ./driver-service
@@ -61,9 +62,11 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/drivers
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=123
+      - eureka.client.serviceUrl.defaultZone=http://service-registry:8761/eureka/
     depends_on:
       - postgres
       - kafka-broker-1
+      - api-gateway
 
   ride-service:
     build: ./ride-service
@@ -74,9 +77,27 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/rides?stringtype=unspecified
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=123
+      - eureka.client.serviceUrl.defaultZone=http://service-registry:8761/eureka/
     depends_on:
       - postgres
       - kafka-broker-1
+      - api-gateway
+
+  service-registry:
+    build: ./service-registry
+    container_name: service-registry
+    ports:
+      - "8761:8761"
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8083:8083"
+    environment:
+      - eureka.client.serviceUrl.defaultZone=http://service-registry:8761/eureka/
+    depends_on:
+      - service-registry
 
 volumes:
   postgres-data:

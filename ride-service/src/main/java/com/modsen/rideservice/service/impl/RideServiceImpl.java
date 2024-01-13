@@ -22,6 +22,8 @@ import com.modsen.rideservice.model.Status;
 import com.modsen.rideservice.repository.RideRepository;
 import com.modsen.rideservice.service.PromoCodeService;
 import com.modsen.rideservice.service.RideService;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
@@ -66,6 +68,8 @@ public class RideServiceImpl implements RideService {
 
   @Override
   @Transactional
+  @CircuitBreaker(name = "CircuitBreakerRideService")
+  @Retry(name = "retryRideService")
   public RideDto order(RideDto rideDto) {
     checkUnfinishedRide(rideDto);
 
@@ -172,6 +176,8 @@ public class RideServiceImpl implements RideService {
 
   @Override
   @Transactional(readOnly = true)
+  @CircuitBreaker(name = "CircuitBreakerRideService")
+  @Retry(name = "retryRideService")
   public RideDto getById(long id) {
     Ride ride = getRide(id);
     CarDto carDto = null;
@@ -198,6 +204,8 @@ public class RideServiceImpl implements RideService {
 
   @Override
   @Transactional
+  @CircuitBreaker(name = "CircuitBreakerRideService")
+  @Retry(name = "retryRideService")
   public void finishByDriver(Long rideId, PassengerRatingFinishDto passengerRatingFinishDto) {
     Ride ride = updateRideAfterFinish(rideId, passengerRatingFinishDto);
     updateDriverAvailabilityAfterRide(ride);
@@ -248,6 +256,8 @@ public class RideServiceImpl implements RideService {
 
   @Override
   @Transactional
+  @CircuitBreaker(name = "CircuitBreakerRideService")
+  @Retry(name = "retryRideService")
   public void updateDriverRatingAfterRide(Long rideId, Integer driverRating) {
     Ride ride = getRide(rideId);
     if (ride.getDriverRating() != null) {
@@ -269,6 +279,8 @@ public class RideServiceImpl implements RideService {
 
   @Override
   @Transactional(readOnly = true)
+  @CircuitBreaker(name = "CircuitBreakerRideService")
+  @Retry(name = "retryRideService")
   public List<RideDto> getAll(Pageable pageable) {
     List<RideDto> rideDtoListWithDriver = getAllRidesWithDriver(pageable);
 

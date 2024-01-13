@@ -39,7 +39,7 @@ public class KafkaProducerConfig {
   }
 
   @Bean
-  @Profile("docker")
+  @Profile("!test")
   public Map<String, Object> producerConfig() {
     return Map.of(
             ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getBootstrapAddress(),

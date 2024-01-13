@@ -1,9 +1,7 @@
-FROM openjdk:11
-
-ARG JAR_FILE=target/passenger-service.jar
-
-WORKDIR /opt/taxi-service
-
-COPY ${JAR_FILE} passenger-service.jar
-
-ENTRYPOINT ["java","-jar","passenger-service.jar"]
+FROM eclipse-temurin:11-jdk-alpine
+VOLUME /tmp
+ARG DEPENDENCY=target/dependency
+COPY ${DEPENDENCY}/BOOT-INF/lib /app/lib
+COPY ${DEPENDENCY}/META-INF /app/META-INF
+COPY ${DEPENDENCY}/BOOT-INF/classes /app
+ENTRYPOINT ["java","-cp","app:app/lib/*","com.modsen.passengerservice.PassengerServiceApplication"]

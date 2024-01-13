@@ -10,6 +10,7 @@ import com.modsen.rideservice.exception.PassengerBankCardNullException;
 import com.modsen.rideservice.exception.RideStatusException;
 import com.modsen.rideservice.exception.ServerUnavailableException;
 import com.modsen.rideservice.exception.UnfinishedBookingRideException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
@@ -19,7 +20,6 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-
 import javax.validation.ConstraintViolationException;
 import java.util.HashMap;
 import java.util.Map;
@@ -92,5 +92,10 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(DataIntegrityViolationException.class)
   public ResponseEntity<Object> handleDataIntegrityViolationException() {
     return new ResponseEntity<>("Database Constraint Violation", HttpStatus.BAD_REQUEST);
+  }
+
+  @ExceptionHandler(CallNotPermittedException.class)
+  public ResponseEntity<Object> handleCallNotPermittedException() {
+    return new ResponseEntity<>("Service unavailable. Try later.", HttpStatus.SERVICE_UNAVAILABLE);
   }
 }

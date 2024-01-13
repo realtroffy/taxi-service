@@ -16,9 +16,17 @@ import com.modsen.rideservice.integration.testenvironment.IntegrationTestEnviron
 import com.modsen.rideservice.model.Status;
 import com.modsen.rideservice.repository.RideRepository;
 import com.modsen.rideservice.service.RideService;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+import io.github.resilience4j.retry.RetryRegistry;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.mockwebserver.MockResponse;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -30,12 +38,14 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlMergeMode;
+import org.testcontainers.shaded.org.awaitility.Awaitility;
 
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 import static io.restassured.RestAssured.given;
@@ -45,6 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 @RequiredArgsConstructor
+@Slf4j
 class RideControllerIT extends IntegrationTestEnvironment {
 
   public static final String RIDE_URL = "/api/v1/rides";
@@ -79,11 +90,16 @@ class RideControllerIT extends IntegrationTestEnvironment {
   private final RideRepository rideRepository;
   private final Jackson2ObjectMapperBuilder builder;
   private final Consumer<String, Object> testConsumer;
+  private final CircuitBreakerRegistry circuitBreakerRegistry;
+  private final RetryRegistry retryRegistry;
 
   private RideDto rideDtoCorrect;
   private DriverWithCarDto driverWithCarDto;
   private DriverPageDto driverPageDto;
   private ObjectMapper objectMapper;
+  private CircuitBreaker rideServiceCircuitBreaker;
+  private CircuitBreakerConfig rideServiceCircuitBreakerConfig;
+  private RetryConfig rideServiceRetryConfig;
 
   @BeforeEach
   @Override
@@ -122,6 +138,13 @@ class RideControllerIT extends IntegrationTestEnvironment {
     driverWithCarDto = DriverWithCarDto.builder().carDto(carDto).build();
 
     objectMapper = builder.build();
+
+    rideServiceCircuitBreaker = circuitBreakerRegistry.circuitBreaker("CircuitBreakerRideService");
+    rideServiceCircuitBreakerConfig = rideServiceCircuitBreaker.getCircuitBreakerConfig();
+    rideServiceCircuitBreaker.reset();
+
+    Retry rideServiceRetry = retryRegistry.retry("retryRideService");
+    rideServiceRetryConfig = rideServiceRetry.getRetryConfig();
   }
 
   @Test
@@ -368,7 +391,6 @@ class RideControllerIT extends IntegrationTestEnvironment {
     rideDtoCorrect.setPassengerId(PASSENGER_ID_WITH_NO_ACTIVE_RIDE);
     RideSearchDto expected = RideSearchDto.builder().rideId(NEXT_RIDE_ID).build();
 
-
     RideDto actualRideDto =
         given()
             .contentType(ContentType.JSON)
@@ -385,10 +407,12 @@ class RideControllerIT extends IntegrationTestEnvironment {
     ConsumerRecords<String, Object> records = testConsumer.poll(Duration.ofMillis(10000));
     testConsumer.close();
     int actualMessageCountInKafkaOrderNewRideTopic = records.count();
-    RideSearchDto actualRideSearchDtoFromKafkaTopic = (RideSearchDto)records.iterator().next().value();
+    RideSearchDto actualRideSearchDtoFromKafkaTopic =
+        (RideSearchDto) records.iterator().next().value();
 
-    assertEquals(expected,actualRideSearchDtoFromKafkaTopic);
-    assertEquals(COUNT_MESSAGES_IN_ORDER_NEW_RIDE_KAFKA_TOPIC, actualMessageCountInKafkaOrderNewRideTopic);
+    assertEquals(expected, actualRideSearchDtoFromKafkaTopic);
+    assertEquals(
+        COUNT_MESSAGES_IN_ORDER_NEW_RIDE_KAFKA_TOPIC, actualMessageCountInKafkaOrderNewRideTopic);
     assertNotNull(actualRideDto);
     assertSame(Status.PENDING, actual);
   }
@@ -499,5 +523,63 @@ class RideControllerIT extends IntegrationTestEnvironment {
     String actual = actualResponse.getBody().asString();
 
     assertEquals(PASSENGER_HAVE_UNFINISHED_RIDE_EXCEPTION_MESSAGE, actual);
+  }
+
+  @Test
+  void testRetryAndCircuitBreakerCombination() {
+    rideDtoCorrect.setPassengerId(PASSENGER_ID_WITH_NO_ACTIVE_RIDE);
+
+    MockResponse errorResponse =
+        new MockResponse().setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+
+    // from close to open state
+    IntStream.rangeClosed(1, rideServiceCircuitBreakerConfig.getMinimumNumberOfCalls())
+        .forEach(
+            i -> {
+              addResponseToMockWebServer(errorResponse);
+              Response response = getResponse();
+              assertEquals(HttpStatus.BAD_REQUEST.value(), response.getStatusCode());
+            });
+    assertSame(CircuitBreaker.State.OPEN, rideServiceCircuitBreaker.getState());
+
+    // open state
+    IntStream.rangeClosed(1, 3)
+        .forEach(
+            i -> {
+              Response response = getResponse();
+              assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), response.getStatusCode());
+            });
+
+    // wait for change state from open to half-open
+    Awaitility.await()
+        .until(() -> rideServiceCircuitBreaker.getState() == CircuitBreaker.State.HALF_OPEN);
+
+    // from half-open to open state
+    IntStream.rangeClosed(
+            1, rideServiceCircuitBreakerConfig.getPermittedNumberOfCallsInHalfOpenState())
+        .forEach(
+            i -> {
+              addResponseToMockWebServer(errorResponse);
+              Response response = getResponse();
+              assertEquals(HttpStatus.BAD_REQUEST.value(), response.getStatusCode());
+            });
+  }
+
+  private void addResponseToMockWebServer(MockResponse errorResponse) {
+    for (int i = 0; i < rideServiceRetryConfig.getMaxAttempts(); i++) {
+      mockWebServer.enqueue(errorResponse);
+    }
+  }
+
+  @SneakyThrows
+  private Response getResponse() {
+    return given()
+        .contentType(ContentType.JSON)
+        .body(objectMapper.writeValueAsString(rideDtoCorrect))
+        .when()
+        .post(RIDE_URL)
+        .then()
+        .extract()
+        .response();
   }
 }
