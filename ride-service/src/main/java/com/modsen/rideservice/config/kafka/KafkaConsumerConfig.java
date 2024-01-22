@@ -68,7 +68,7 @@ public class KafkaConsumerConfig {
   }
 
   @Bean
-  @Profile("docker")
+  @Profile("!test")
   public Map<String, Object> consumerConfig() {
     return Map.of(
         ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getBootstrapAddress(),

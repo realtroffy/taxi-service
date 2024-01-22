@@ -3,7 +3,7 @@ package com.modsen.driverservice.integration.testbase;
 import com.modsen.driverservice.integration.annotation.IntegrationTests;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.BeforeAll;
-import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.jdbc.Sql;

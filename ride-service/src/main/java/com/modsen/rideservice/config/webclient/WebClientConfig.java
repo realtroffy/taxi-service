@@ -1,12 +1,15 @@
 package com.modsen.rideservice.config.webclient;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.loadbalancer.reactive.ReactorLoadBalancerExchangeFilterFunction;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration
+@RequiredArgsConstructor
 public class WebClientConfig {
 
     @Value("${driver.service.url}")
@@ -14,15 +17,17 @@ public class WebClientConfig {
     @Value("${passenger.service.url}")
     private String passengerServiceUrl;
 
+    private final ReactorLoadBalancerExchangeFilterFunction filter;
+
     @Bean
-    @Profile("docker")
+    @Profile("!test")
     public WebClient driverWebClient(){
-        return WebClient.builder().baseUrl(driverServiceUrl).build();
+        return WebClient.builder().filter(filter).baseUrl(driverServiceUrl).build();
     }
 
     @Bean
-    @Profile("docker")
+    @Profile("!test")
     public WebClient passengerWebClient(){
-        return WebClient.builder().baseUrl(passengerServiceUrl).build();
+        return WebClient.builder().filter(filter).baseUrl(passengerServiceUrl).build();
     }
 }

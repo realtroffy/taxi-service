@@ -1,9 +1,8 @@
-FROM openjdk:11
-
-ARG JAR_FILE=target/passenger-service.jar
-
-WORKDIR /opt/taxi-service
-
-COPY ${JAR_FILE} passenger-service.jar
-
-ENTRYPOINT ["java","-jar","passenger-service.jar"]
+FROM eclipse-temurin:11-jdk-alpine
+VOLUME /tmp
+ARG EXTRACTED=target/extracted
+COPY ${EXTRACTED}/dependencies/ ./
+COPY ${EXTRACTED}/spring-boot-loader/ ./
+COPY ${EXTRACTED}/snapshot-dependencies/ ./
+COPY ${EXTRACTED}/application/ ./
+ENTRYPOINT ["java","org.springframework.boot.loader.JarLauncher"]

@@ -12,7 +12,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
@@ -58,7 +58,8 @@ public abstract class IntegrationTestEnvironment {
     mockWebServer.close();
   }
 
-  @LocalServerPort private int port;
+  @LocalServerPort
+  private int port;
 
   protected void setUp() {
     RestAssured.baseURI = "http://localhost";
