@@ -99,10 +99,82 @@ services:
     depends_on:
       - service-registry
 
+  prometheus:
+    image: prom/prometheus:v2.44.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+      image: grafana/grafana:9.5.2
+      container_name: grafana
+      ports:
+        - "3000:3000"
+      restart: unless-stopped
+      volumes:
+        - ./monitoring/grafana/provisioning/datasource:/etc/grafana/provisioning/datasource
+      depends_on:
+        - prometheus
+
+  logstash:
+    image: logstash:7.7.0
+    container_name: logstash
+    command: logstash -f /etc/logstash/conf.d/logstash.conf
+    volumes:
+      - ./monitoring/logstash:/etc/logstash/conf.d
+    ports:
+      - "5000:5000"
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    image: kibana:7.7.0
+    container_name: kibana
+    environment:
+      ELASTICSEARCH_URL: "http://elasticsearch:9300"
+    ports:
+      - 5601:5601
+    depends_on:
+      - elasticsearch
+
+  elasticsearch:
+    image: elasticsearch:7.7.0
+    container_name: elasticsearch
+    environment:
+      - node.name=elasticsearch
+      - discovery.type=single-node
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ports:
+      - 9300:9300
+      - 9200:9200
+
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    depends_on:
+      - elasticsearch
+    environment:
+      - STORAGE_TYPE=elasticsearch
+      - "ES_HOSTS=elasticsearch:9200"
+    ports:
+      - "9411:9411"
+
 volumes:
   postgres-data:
     driver: local
   kafka-data:
     driver: local
   zookeeper-data:
+    driver: local
+  esdata:
     driver: local

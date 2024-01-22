@@ -1,0 +1,40 @@
+scrape_configs:
+  - job_name: 'RideServiceMetrics'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['host.docker.internal:8082']
+        labels:
+          application: 'Ride service'
+
+  - job_name: 'PassengerServiceMetrics'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+        labels:
+          application: 'Passenger service'
+
+  - job_name: 'DriverServiceMetrics'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: [ 'host.docker.internal:8081' ]
+        labels:
+          application: 'Driver service'
+
+  - job_name: 'ApiGatewayMetrics'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: [ 'host.docker.internal:8083' ]
+        labels:
+          application: 'Api gateway'
+
+  - job_name: 'ServiceRegistryMetrics'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: [ 'host.docker.internal:8761' ]
+        labels:
+          application: 'Service registry'

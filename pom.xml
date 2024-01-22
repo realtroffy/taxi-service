@@ -46,6 +46,8 @@
         <kafka.testcontainers.version>1.19.3</kafka.testcontainers.version>
         <stream.cloud.starter.parent.version>2021.0.4</stream.cloud.starter.parent.version>
         <resilience4j.spring.boot2.version>1.7.0</resilience4j.spring.boot2.version>
+        <spring.cloud.starter.sleuth.version>3.1.4</spring.cloud.starter.sleuth.version>
+        <logstash.logback.encoder.version>7.2</logstash.logback.encoder.version>
     </properties>
 
     <dependencyManagement>
@@ -87,6 +89,21 @@
             </dependency>
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-starter-sleuth</artifactId>
+                <version>${spring.cloud.starter.sleuth.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.logstash.logback</groupId>
+                <artifactId>logstash-logback-encoder</artifactId>
+                <version>${logstash.logback.encoder.version}</version>
+            </dependency>
+            <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-sleuth-zipkin</artifactId>
+            <version>${spring.cloud.starter.sleuth.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-starter-parent</artifactId>
                 <version>${stream.cloud.starter.parent.version}</version>
                 <type>pom</type>
@@ -111,6 +128,11 @@
                 <groupId>org.apache.kafka</groupId>
                 <artifactId>kafka-streams</artifactId>
                 <version>${spring-kafka-streams-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-registry-prometheus</artifactId>
+                <version>1.8.9</version>
             </dependency>
             <dependency>
                 <groupId>org.postgresql</groupId>
