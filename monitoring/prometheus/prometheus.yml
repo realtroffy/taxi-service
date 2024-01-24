@@ -38,3 +38,7 @@ scrape_configs:
       - targets: [ 'host.docker.internal:8761' ]
         labels:
           application: 'Service registry'
+
+  - job_name: 'kafka-server'
+    static_configs:
+      - targets: [ 'host.docker.internal:7071' ]
