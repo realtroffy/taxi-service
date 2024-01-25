@@ -48,6 +48,7 @@
         <resilience4j.spring.boot2.version>1.7.0</resilience4j.spring.boot2.version>
         <spring.cloud.starter.sleuth.version>3.1.4</spring.cloud.starter.sleuth.version>
         <logstash.logback.encoder.version>7.2</logstash.logback.encoder.version>
+        <micrometer.registry.prometheus.version>1.8.9</micrometer.registry.prometheus.version>
     </properties>
 
     <dependencyManagement>
@@ -132,7 +133,7 @@
             <dependency>
                 <groupId>io.micrometer</groupId>
                 <artifactId>micrometer-registry-prometheus</artifactId>
-                <version>1.8.9</version>
+                <version>${micrometer.registry.prometheus.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.postgresql</groupId>

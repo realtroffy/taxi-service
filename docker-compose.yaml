@@ -110,7 +110,7 @@ services:
         - "3000:3000"
       restart: unless-stopped
       volumes:
-        - ./monitoring/grafana/provisioning/datasource:/etc/grafana/provisioning/datasource
+        - ./monitoring/grafana:/etc/grafana/provisioning/
       depends_on:
         - prometheus
 

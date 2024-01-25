@@ -34,6 +34,7 @@
   "tags": [],
   "style": "dark",
   "timezone": "browser",
+  "uid": "f5d49a4e-b695-490a-b3e5-9b18db5babcb",
   "editable": true,
   "hideControls": false,
   "sharedCrosshair": false,
@@ -48,7 +49,7 @@
             "localhost:7071": "#629E51"
           },
           "bars": false,
-          "datasource": "${DS_MARI}",
+          "datasource": "",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -128,7 +129,7 @@
             "localhost:7071": "#BA43A9"
           },
           "bars": false,
-          "datasource": "${DS_MARI}",
+          "datasource": "",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -208,7 +209,7 @@
             "localhost:7071": "#890F02"
           },
           "bars": false,
-          "datasource": "${DS_MARI}",
+          "datasource": "",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -294,7 +295,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_MARI}",
+          "datasource": "",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -372,7 +373,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_MARI}",
+          "datasource": "",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -450,7 +451,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_MARI}",
+          "datasource": "",
           "editable": true,
           "error": false,
           "fill": 1,
