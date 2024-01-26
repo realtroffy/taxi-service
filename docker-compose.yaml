@@ -1,31 +1,27 @@
 version: '3'
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:latest
-    container_name: zookeeper
-    volumes:
-      - zookeeper-data:/var/lib/zookeeper/data
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
+    image: wurstmeister/zookeeper
     ports:
       - "2181:2181"
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
 
   kafka-broker-1:
-    image: confluentinc/cp-kafka:latest
+    image: rdsea/kafka-jmx-prometheus:latest
     container_name: kafka
-    volumes:
-    - kafka-data:/var/lib/kafka/data
     ports:
       - "9092:9092"
-      - "19092:19092"
-    depends_on:
-      - zookeeper
+      - "7071:7071"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:19092,PLAINTEXT_INTERNAL://localhost:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:19092,OUTSIDE://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_LISTENERS: INSIDE://0.0.0.0:19092,OUTSIDE://0.0.0.0:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_OPTS: -javaagent:/usr/app/jmx_prometheus_javaagent.jar=7071:/usr/app/prom-jmx-agent-config.yml
+    volumes:
+      - kafka-data:/var/lib/kafka/data
 
   postgres:
     image: 'postgres:13.1-alpine'
@@ -99,10 +95,82 @@ services:
     depends_on:
       - service-registry
 
+  prometheus:
+    image: prom/prometheus:v2.44.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+      image: grafana/grafana:9.5.2
+      container_name: grafana
+      ports:
+        - "3000:3000"
+      restart: unless-stopped
+      volumes:
+        - ./monitoring/grafana:/etc/grafana/provisioning/
+      depends_on:
+        - prometheus
+
+  logstash:
+    image: logstash:7.7.0
+    container_name: logstash
+    command: logstash -f /etc/logstash/conf.d/logstash.conf
+    volumes:
+      - ./monitoring/logstash:/etc/logstash/conf.d
+    ports:
+      - "5000:5000"
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    image: kibana:7.7.0
+    container_name: kibana
+    environment:
+      ELASTICSEARCH_URL: "http://elasticsearch:9300"
+    ports:
+      - 5601:5601
+    depends_on:
+      - elasticsearch
+
+  elasticsearch:
+    image: elasticsearch:7.7.0
+    container_name: elasticsearch
+    environment:
+      - node.name=elasticsearch
+      - discovery.type=single-node
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ports:
+      - 9300:9300
+      - 9200:9200
+
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    depends_on:
+      - elasticsearch
+    environment:
+      - STORAGE_TYPE=elasticsearch
+      - "ES_HOSTS=elasticsearch:9200"
+    ports:
+      - "9411:9411"
+
 volumes:
   postgres-data:
     driver: local
   kafka-data:
     driver: local
   zookeeper-data:
+    driver: local
+  esdata:
     driver: local
