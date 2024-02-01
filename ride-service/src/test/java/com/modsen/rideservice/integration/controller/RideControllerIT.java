@@ -12,6 +12,7 @@ import com.modsen.rideservice.dto.PassengerRatingFinishDto;
 import com.modsen.rideservice.dto.RideDto;
 import com.modsen.rideservice.dto.RidePageDto;
 import com.modsen.rideservice.dto.RideSearchDto;
+import com.modsen.rideservice.integration.helper.AccessTokenExtractor;
 import com.modsen.rideservice.integration.testenvironment.IntegrationTestEnvironment;
 import com.modsen.rideservice.model.Status;
 import com.modsen.rideservice.repository.RideRepository;
@@ -92,6 +93,7 @@ class RideControllerIT extends IntegrationTestEnvironment {
   private final Consumer<String, Object> testConsumer;
   private final CircuitBreakerRegistry circuitBreakerRegistry;
   private final RetryRegistry retryRegistry;
+  private final AccessTokenExtractor accessTokenExtractor;
 
   private RideDto rideDtoCorrect;
   private DriverWithCarDto driverWithCarDto;
@@ -100,6 +102,9 @@ class RideControllerIT extends IntegrationTestEnvironment {
   private CircuitBreaker rideServiceCircuitBreaker;
   private CircuitBreakerConfig rideServiceCircuitBreakerConfig;
   private RetryConfig rideServiceRetryConfig;
+  private String adminAccessToken;
+  private String passengerAccessToken;
+  private String driverAccessToken;
 
   @BeforeEach
   @Override
@@ -145,6 +150,10 @@ class RideControllerIT extends IntegrationTestEnvironment {
 
     Retry rideServiceRetry = retryRegistry.retry("retryRideService");
     rideServiceRetryConfig = rideServiceRetry.getRetryConfig();
+
+    adminAccessToken = accessTokenExtractor.getAdminAccessToken();
+    passengerAccessToken = accessTokenExtractor.getPassengerAccessToken();
+    driverAccessToken = accessTokenExtractor.getDriverAccessToken();
   }
 
   @Test
@@ -157,6 +166,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
     mockWebServer.enqueue(responseGetDriverWithCarDto);
 
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", EXIST_RIDE_ID)
         .when()
         .get(RIDE_URL + ID_VARIABLE)
@@ -184,6 +195,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
   @Test
   void getRideByIdIfNotExist() {
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", NOT_EXIST_ID)
         .when()
         .get(RIDE_URL + ID_VARIABLE)
@@ -203,6 +216,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
 
     RidePageDto actual =
         given()
+            .auth()
+            .oauth2(adminAccessToken)
             .when()
             .get(RIDE_URL)
             .then()
@@ -216,6 +231,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
   @Test
   void deleteRideByIdIfExist() {
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", EXIST_RIDE_ID)
         .when()
         .delete(RIDE_URL + ID_VARIABLE)
@@ -230,6 +247,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
   @Test
   void deleteRideByIdIfNotExist() {
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", NOT_EXIST_ID)
         .when()
         .delete(RIDE_URL + ID_VARIABLE)
@@ -246,6 +265,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
     rideDtoCorrect.setStatus(Status.PENDING);
     rideDtoCorrect.setId(EXIST_RIDE_ID);
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", EXIST_RIDE_ID)
         .contentType(ContentType.JSON)
         .body(objectMapper.writeValueAsString(rideDtoCorrect))
@@ -261,6 +282,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
   @Test
   void updateRideByIdIfNotExist() throws JsonProcessingException {
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", NOT_EXIST_ID)
         .contentType(ContentType.JSON)
         .body(objectMapper.writeValueAsString(rideDtoCorrect))
@@ -277,6 +300,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
     mockWebServer.enqueue(responseUpdateDriverRatingAfterFinishRide);
 
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", EXIST_RIDE_ID)
         .pathParam("driverRating", RATING_AFTER_RIDE)
         .when()
@@ -288,6 +313,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
   @Test
   void updateDriverRatingAfterFinishRideIfNotExist() {
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", NOT_EXIST_ID)
         .pathParam("driverRating", RATING_AFTER_RIDE)
         .when()
@@ -299,6 +326,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
   @Test
   void cancelByPassengerIfRideExistAndStatusPending() {
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", EXIST_SECOND_RIDE_ID)
         .when()
         .put(RIDE_URL + ID_VARIABLE + CANCEL_RIDE_BY_PASSENGER_URL)
@@ -312,6 +341,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
   @Test
   void cancelByPassengerIfRideNotExist() {
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", NOT_EXIST_ID)
         .when()
         .put(RIDE_URL + ID_VARIABLE + CANCEL_RIDE_BY_PASSENGER_URL)
@@ -324,6 +355,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
   @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
   void cancelByPassengerIfRideExistAndStatusActiveThenReturnStatusBadRequest() {
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", EXIST_SECOND_RIDE_ID)
         .when()
         .put(RIDE_URL + ID_VARIABLE + CANCEL_RIDE_BY_PASSENGER_URL)
@@ -344,6 +377,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
     mockWebServer.enqueue(responseUpdateDriverAvailabilityToTrueAfterRide);
 
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", EXIST_RIDE_ID)
         .contentType(ContentType.JSON)
         .body(objectMapper.writeValueAsString(passengerRatingFinishDto))
@@ -359,6 +394,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
     passengerRatingFinishDto.setPassengerRating(RATING_AFTER_RIDE);
 
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", NOT_EXIST_ID)
         .contentType(ContentType.JSON)
         .body(objectMapper.writeValueAsString(passengerRatingFinishDto))
@@ -393,6 +430,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
 
     RideDto actualRideDto =
         given()
+            .auth()
+            .oauth2(adminAccessToken)
             .contentType(ContentType.JSON)
             .body(objectMapper.writeValueAsString(rideDtoCorrect))
             .when()
@@ -427,6 +466,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
 
     Response actualResponse =
         given()
+            .auth()
+            .oauth2(adminAccessToken)
             .contentType(ContentType.JSON)
             .body(objectMapper.writeValueAsString(rideDtoCorrect))
             .when()
@@ -456,6 +497,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
 
     Response actualResponse =
         given()
+            .auth()
+            .oauth2(adminAccessToken)
             .contentType(ContentType.JSON)
             .body(objectMapper.writeValueAsString(rideDtoCorrect))
             .when()
@@ -493,6 +536,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
 
     Response actualResponse =
         given()
+            .auth()
+            .oauth2(adminAccessToken)
             .contentType(ContentType.JSON)
             .body(objectMapper.writeValueAsString(rideDtoCorrect))
             .when()
@@ -512,6 +557,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
 
     Response actualResponse =
         given()
+            .auth()
+            .oauth2(adminAccessToken)
             .contentType(ContentType.JSON)
             .body(objectMapper.writeValueAsString(rideDtoCorrect))
             .when()
@@ -574,6 +621,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
   @SneakyThrows
   private Response getResponse() {
     return given()
+        .auth()
+        .oauth2(adminAccessToken)
         .contentType(ContentType.JSON)
         .body(objectMapper.writeValueAsString(rideDtoCorrect))
         .when()
@@ -581,5 +630,54 @@ class RideControllerIT extends IntegrationTestEnvironment {
         .then()
         .extract()
         .response();
+  }
+
+  @Test
+  void couldNotDeleteRideByPassengerRole() {
+    given()
+        .auth()
+        .oauth2(passengerAccessToken)
+        .pathParam("id", EXIST_RIDE_ID)
+        .when()
+        .delete(RIDE_URL + ID_VARIABLE)
+        .then()
+        .statusCode(HttpStatus.FORBIDDEN.value());
+  }
+
+  @Test
+  void couldNotOrderRideByDriverRole() throws JsonProcessingException {
+    given()
+        .auth()
+        .oauth2(driverAccessToken)
+        .contentType(ContentType.JSON)
+        .body(objectMapper.writeValueAsString(rideDtoCorrect))
+        .when()
+        .post(RIDE_URL)
+        .then()
+        .statusCode(HttpStatus.FORBIDDEN.value());
+  }
+
+  @Test
+  void couldNotOrderRideWithoutAccessToken() throws JsonProcessingException {
+    given()
+        .contentType(ContentType.JSON)
+        .body(objectMapper.writeValueAsString(rideDtoCorrect))
+        .when()
+        .post(RIDE_URL)
+        .then()
+        .statusCode(HttpStatus.UNAUTHORIZED.value());
+  }
+
+  @Test
+  void couldNotOrderRideWithIncorrectAccessToken() throws JsonProcessingException {
+    given()
+            .auth()
+            .oauth2("123")
+            .contentType(ContentType.JSON)
+            .body(objectMapper.writeValueAsString(rideDtoCorrect))
+            .when()
+            .post(RIDE_URL)
+            .then()
+            .statusCode(HttpStatus.UNAUTHORIZED.value());
   }
 }

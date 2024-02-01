@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.modsen.rideservice.dto.PromoCodeDto;
 import com.modsen.rideservice.dto.PromoCodePageDto;
+import com.modsen.rideservice.integration.helper.AccessTokenExtractor;
 import com.modsen.rideservice.integration.testenvironment.IntegrationTestEnvironment;
 import com.modsen.rideservice.repository.PromoCodeRepository;
 import com.modsen.rideservice.service.PromoCodeService;
@@ -42,8 +43,12 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
   private final PromoCodeService promoCodeService;
   private final PromoCodeRepository promoCodeRepository;
   private final Jackson2ObjectMapperBuilder builder;
+  private final AccessTokenExtractor accessTokenExtractor;
   private PromoCodeDto promoCodeDtoCorrect;
   private ObjectMapper objectMapper;
+  private String adminAccessToken;
+  private String passengerAccessToken;
+  private String driverAccessToken;
 
   @BeforeEach
   @Override
@@ -59,11 +64,17 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
             .build();
 
     objectMapper = builder.build();
+
+    adminAccessToken = accessTokenExtractor.getAdminAccessToken();
+    passengerAccessToken = accessTokenExtractor.getPassengerAccessToken();
+    driverAccessToken = accessTokenExtractor.getDriverAccessToken();
   }
 
   @Test
   void getPromoCodeByIdIfExist() {
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", EXIST_PROMO_CODE_ID)
         .when()
         .get(PROMO_CODE_URL + ID_VARIABLE)
@@ -80,6 +91,8 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
   @Test
   void getPromoCodeByIdIfNotExist() {
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", NOT_EXIST_ID)
         .when()
         .get(PROMO_CODE_URL + ID_VARIABLE)
@@ -88,9 +101,11 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
   }
 
   @Test
-  void getAllDrivers() {
+  void getAllPromocodes() {
     PromoCodePageDto actualPromoCodePageDto =
         given()
+            .auth()
+            .oauth2(adminAccessToken)
             .when()
             .get(PROMO_CODE_URL)
             .then()
@@ -106,6 +121,8 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
   void saveDriverIfDtoCorrect() throws JsonProcessingException {
     PromoCodeDto actual =
         given()
+            .auth()
+            .oauth2(adminAccessToken)
             .contentType(ContentType.JSON)
             .body(objectMapper.writeValueAsString(promoCodeDtoCorrect))
             .when()
@@ -123,6 +140,8 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
   void updateDriverByIdIfExist() throws JsonProcessingException {
     promoCodeDtoCorrect.setId(EXIST_PROMO_CODE_ID);
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", EXIST_PROMO_CODE_ID)
         .contentType(ContentType.JSON)
         .body(objectMapper.writeValueAsString(promoCodeDtoCorrect))
@@ -139,6 +158,8 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
   void updatePromoCodeByIdIfNotExist() throws JsonProcessingException {
     promoCodeDtoCorrect.setId(NOT_EXIST_ID);
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", NOT_EXIST_ID)
         .contentType(ContentType.JSON)
         .body(objectMapper.writeValueAsString(promoCodeDtoCorrect))
@@ -151,6 +172,8 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
   @Test
   void deletePromoCodeByIdIfExist() {
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", EXIST_PROMO_CODE_ID_WITH_NO_RIDES)
         .when()
         .delete(PROMO_CODE_URL + ID_VARIABLE)
@@ -165,6 +188,8 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
   @Test
   void deletePromoCodesByIdIfNotExist() {
     given()
+        .auth()
+        .oauth2(adminAccessToken)
         .pathParam("id", NOT_EXIST_ID)
         .when()
         .delete(PROMO_CODE_URL + ID_VARIABLE)
@@ -183,6 +208,8 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
     promoCodeDtoCorrect.setEnd(FINISH_DATE_BEFORE_START_DATE);
     Response actualResponse =
         given()
+            .auth()
+            .oauth2(adminAccessToken)
             .pathParam("id", EXIST_PROMO_CODE_ID)
             .contentType(ContentType.JSON)
             .body(objectMapper.writeValueAsString(promoCodeDtoCorrect))
@@ -200,5 +227,27 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
             FINISH_DATE_BEFORE_START_DATE);
 
     assertEquals(expected, actual);
+  }
+
+  @Test
+  void couldNotGetAllPromocodesWithPassengerRole() {
+    given()
+        .auth()
+        .oauth2(passengerAccessToken)
+        .when()
+        .get(PROMO_CODE_URL)
+        .then()
+        .statusCode(HttpStatus.FORBIDDEN.value());
+  }
+
+  @Test
+  void couldNotGetAllPromocodesWithDriverRole() {
+    given()
+        .auth()
+        .oauth2(driverAccessToken)
+        .when()
+        .get(PROMO_CODE_URL)
+        .then()
+        .statusCode(HttpStatus.FORBIDDEN.value());
   }
 }

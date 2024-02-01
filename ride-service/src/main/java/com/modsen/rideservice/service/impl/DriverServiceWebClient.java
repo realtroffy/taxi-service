@@ -10,6 +10,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import java.time.Duration;
@@ -23,6 +26,8 @@ public class DriverServiceWebClient {
 
   public static final String SERVER_UNAVAILABLE_EXCEPTION_MESSAGE =
       "Driver service is not responding";
+  public static final String PREFIX_BEARER = "Bearer ";
+  public static final String HEADER_AUTHORIZATION = "Authorization";
 
   private final WebClient webClient;
 
@@ -38,6 +43,7 @@ public class DriverServiceWebClient {
         .post()
         .uri("/list-id")
         .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+        .header(HEADER_AUTHORIZATION, PREFIX_BEARER + getJwt())
         .bodyValue(idPageDto)
         .retrieve()
         .onStatus(
@@ -58,6 +64,7 @@ public class DriverServiceWebClient {
     webClient
         .put()
         .uri("/" + driverId + "/available-true")
+        .header(HEADER_AUTHORIZATION, PREFIX_BEARER + getJwt())
         .retrieve()
         .onStatus(
             HttpStatus::is4xxClientError,
@@ -77,6 +84,7 @@ public class DriverServiceWebClient {
     webClient
         .put()
         .uri("/" + driverId + "/new-rating")
+        .header(HEADER_AUTHORIZATION, PREFIX_BEARER + getJwt())
         .bodyValue(driverRatingDto)
         .retrieve()
         .onStatus(
@@ -97,6 +105,7 @@ public class DriverServiceWebClient {
     return webClient
         .get()
         .uri("/" + driverId)
+        .header(HEADER_AUTHORIZATION, PREFIX_BEARER + getJwt())
         .retrieve()
         .onStatus(
             HttpStatus::is4xxClientError,
@@ -110,5 +119,11 @@ public class DriverServiceWebClient {
         .toEntity(DriverWithCarDto.class)
         .timeout(Duration.ofMinutes(1))
         .block();
+  }
+
+  private String getJwt() {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    Jwt jwt = (Jwt) authentication.getPrincipal();
+    return jwt.getTokenValue();
   }
 }
