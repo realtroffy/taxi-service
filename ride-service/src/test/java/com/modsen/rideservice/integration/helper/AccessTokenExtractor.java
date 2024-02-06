@@ -8,6 +8,7 @@ import org.springframework.test.context.TestConstructor;
 
 import java.util.Base64;
 
+import static com.modsen.rideservice.integration.testenvironment.IntegrationTestEnvironment.KEYCLOAK;
 import static io.restassured.RestAssured.given;
 import static org.springframework.test.context.TestConstructor.AutowireMode.ALL;
 
@@ -49,7 +50,7 @@ public class AccessTokenExtractor {
         .formParam("grant_type", "password")
         .formParam("username", username)
         .formParam("password", accessTokenProperties.getPasswordForAllRoles())
-        .post(accessTokenProperties.getAccessTokenPath())
+        .post(KEYCLOAK.getAuthServerUrl() + accessTokenProperties.getAccessTokenPath())
         .then()
         .statusCode(HttpStatus.OK.value())
         .extract()

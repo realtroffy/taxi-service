@@ -1,6 +1,7 @@
 package com.modsen.rideservice.integration.testenvironment;
 
 import com.modsen.rideservice.integration.annotation.IntegrationTests;
+import dasniko.testcontainers.keycloak.KeycloakContainer;
 import io.restassured.RestAssured;
 import okhttp3.mockwebserver.MockWebServer;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -43,6 +44,9 @@ public abstract class IntegrationTestEnvironment {
       new PostgreSQLContainer<>("postgres:13.1-alpine").withUrlParam("stringtype", "unspecified");
   public static final KafkaContainer kafka =
       new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.3.3"));
+  public static final KeycloakContainer KEYCLOAK =
+      new KeycloakContainer("quay.io/keycloak/keycloak:latest")
+          .withRealmImportFile("/realm-export.json");
 
   public static MockWebServer mockWebServer;
 
@@ -51,11 +55,13 @@ public abstract class IntegrationTestEnvironment {
     container.start();
     kafka.start();
     mockWebServer = new MockWebServer();
+    KEYCLOAK.start();
   }
 
   @AfterAll
   protected static void afterAll() throws IOException {
     mockWebServer.close();
+    KEYCLOAK.close();
   }
 
   @LocalServerPort
@@ -71,6 +77,10 @@ public abstract class IntegrationTestEnvironment {
     registry.add("spring.datasource.url ", container::getJdbcUrl);
     registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
     registry.add("spring.kafka.bootstrap-address", kafka::getBootstrapServers);
+    registry.add(
+        "spring.security.oauth2.resourceserver.jwt.jwk-set-uri",
+        () ->
+            KEYCLOAK.getAuthServerUrl() + "realms/modsen-realm/protocol/openid-connect/certs");
   }
 
   @TestConfiguration
