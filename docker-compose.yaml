@@ -35,6 +35,16 @@ services:
       - ./docker-postgresql-multiple-databases:/docker-entrypoint-initdb.d
       - postgres-data:/var/lib/postgresql/data
 
+  mongo:
+    image: mongo:6.0.3
+    ports:
+      - '27017:27017'
+    container_name: mongo
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+      - mongo_config:/data/configdb
+
   passenger-service:
     build: ./passenger-service
     container_name: passenger-service
@@ -174,3 +184,5 @@ volumes:
     driver: local
   esdata:
     driver: local
+  mongo_data:
+  mongo_config:

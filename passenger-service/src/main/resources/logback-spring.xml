@@ -12,5 +12,5 @@
         <appender-ref ref="CONSOLE"/>
     </root>
     <logger name="org.springframework" level="INFO"/>
-    <logger name="com.modsen.passengerservice" level="DEBUG"/>
+    <logger name="com.modsen.com.modsen.passengerservice" level="DEBUG"/>
 </configuration>
