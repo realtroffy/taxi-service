@@ -12,18 +12,17 @@ import com.modsen.rideservice.dto.PassengerRatingFinishDto;
 import com.modsen.rideservice.dto.RideDto;
 import com.modsen.rideservice.dto.RidePageDto;
 import com.modsen.rideservice.dto.RideSearchDto;
+import com.modsen.rideservice.integration.controller.restassured.RestAssuredRideController;
 import com.modsen.rideservice.integration.helper.AccessTokenExtractor;
 import com.modsen.rideservice.integration.testenvironment.IntegrationTestEnvironment;
 import com.modsen.rideservice.model.Status;
 import com.modsen.rideservice.repository.RideRepository;
-import com.modsen.rideservice.service.RideService;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import io.github.resilience4j.retry.RetryRegistry;
-import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -49,7 +48,6 @@ import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
-import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -59,16 +57,10 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 @Slf4j
 class RideControllerIT extends IntegrationTestEnvironment {
 
-  public static final String RIDE_URL = "/api/v1/rides";
-  public static final String ID_VARIABLE = "/{id}";
-  public static final String DRIVER_RATING_URL = "/{driverRating}";
-  public static final String CANCEL_RIDE_BY_PASSENGER_URL = "/cancel";
-  public static final String FINISH_RIDE_BY_DRIVER_URL = "/finish";
   public static final Long EXIST_PASSENGER_ID = 1L;
   public static final Long EXIST_RIDE_ID = 1L;
   public static final Long EXIST_SECOND_RIDE_ID = 2L;
   public static final Long EXIST_DRIVER_ID = 1L;
-  public static final Long NOT_EXIST_ID = 30L;
   public static final int COUNT_EXISTED_ENTITY = 4;
   public static final Integer RATING_AFTER_RIDE = 3;
   public static final Long PASSENGER_ID_WITH_NO_ACTIVE_RIDE = 5L;
@@ -87,15 +79,17 @@ class RideControllerIT extends IntegrationTestEnvironment {
       "You have unfinished ride. You could order new ride after finished current ride";
   public static final String KAFKA_ORDER_RIDE_TOPIC = "order-new-ride";
 
-  private final RideService rideService;
   private final RideRepository rideRepository;
   private final Jackson2ObjectMapperBuilder builder;
   private final Consumer<String, Object> testConsumer;
   private final CircuitBreakerRegistry circuitBreakerRegistry;
   private final RetryRegistry retryRegistry;
   private final AccessTokenExtractor accessTokenExtractor;
+  private final RestAssuredRideController restAssured;
 
   private RideDto rideDtoCorrect;
+  private RideDto savedInDbRideDto;
+  private CarDto carDto;
   private DriverWithCarDto driverWithCarDto;
   private DriverPageDto driverPageDto;
   private ObjectMapper objectMapper;
@@ -115,17 +109,35 @@ class RideControllerIT extends IntegrationTestEnvironment {
             .startLocation("Minsk")
             .endLocation("London")
             .passengerId(EXIST_PASSENGER_ID)
+            .driverId(EXIST_DRIVER_ID)
             .bookingTime(LocalDateTime.of(2023, 10, 10, 10, 10))
             .passengerBankCardId("3")
             .cost(BigDecimal.valueOf(10.12))
             .build();
 
-    CarDto carDto =
+    carDto =
         CarDto.builder()
             .driverId(EXIST_DRIVER_ID)
             .colour("green")
             .model("Lada vesta")
             .number("1123-AC7")
+            .build();
+
+    savedInDbRideDto =
+        RideDto.builder()
+            .id(EXIST_RIDE_ID)
+            .startLocation("Minsk")
+            .endLocation("London")
+            .passengerId(EXIST_PASSENGER_ID)
+            .driverId(EXIST_DRIVER_ID)
+            .bookingTime(LocalDateTime.of(2023, 1, 1, 10, 0))
+            .approvedTime(LocalDateTime.of(2023, 1, 1, 10, 1))
+            .startTime(LocalDateTime.of(2023, 1, 1, 10, 1))
+            .promoCodeName("SUPER50")
+            .status(Status.ACTIVE)
+            .carDto(carDto)
+            .passengerBankCardId("1")
+            .cost(BigDecimal.valueOf(18.79))
             .build();
 
     DriverRideDto driverRideDto =
@@ -165,43 +177,18 @@ class RideControllerIT extends IntegrationTestEnvironment {
             .setBody(objectMapper.writeValueAsString(driverWithCarDto));
     mockWebServer.enqueue(responseGetDriverWithCarDto);
 
-    given()
-        .auth()
-        .oauth2(adminAccessToken)
-        .pathParam("id", EXIST_RIDE_ID)
-        .when()
-        .get(RIDE_URL + ID_VARIABLE)
-        .then()
-        .statusCode(HttpStatus.OK.value())
-        .and()
-        .body("id", equalTo(EXIST_RIDE_ID.intValue()))
-        .body("startLocation", equalTo("Minsk"))
-        .body("endLocation", equalTo("London"))
-        .body("passengerId", equalTo(1))
-        .body("driverId", equalTo(1))
-        .body("bookingTime", equalTo("2023-01-01T10:00:00"))
-        .body("approvedTime", equalTo("2023-01-01T10:01:00"))
-        .body("startTime", equalTo("2023-01-01T10:01:00"))
-        .body("passengerBankCardId", equalTo("1"))
-        .body("promoCodeName", equalTo("SUPER50"))
-        .body("cost", equalTo(18.79f))
-        .body("status", equalTo("ACTIVE"))
-        .body("carDto.driverId", equalTo(1))
-        .body("carDto.colour", equalTo("green"))
-        .body("carDto.model", equalTo("Lada vesta"))
-        .body("carDto.number", equalTo("1123-AC7"));
+    Response response = restAssured.getRideIdIfExist(adminAccessToken);
+
+    RideDto actual = response.then().statusCode(HttpStatus.OK.value()).extract().as(RideDto.class);
+
+    assertEquals(savedInDbRideDto, actual);
   }
 
   @Test
   void getRideByIdIfNotExist() {
-    given()
-        .auth()
-        .oauth2(adminAccessToken)
-        .pathParam("id", NOT_EXIST_ID)
-        .when()
-        .get(RIDE_URL + ID_VARIABLE)
-        .then()
-        .statusCode(HttpStatus.NOT_FOUND.value());
+    Response response = restAssured.getRideByIdIfNotExist(adminAccessToken);
+
+    response.then().statusCode(HttpStatus.NOT_FOUND.value());
   }
 
   @Test
@@ -214,49 +201,31 @@ class RideControllerIT extends IntegrationTestEnvironment {
 
     mockWebServer.enqueue(responseGetDriverPageDto);
 
-    RidePageDto actual =
-        given()
-            .auth()
-            .oauth2(adminAccessToken)
-            .when()
-            .get(RIDE_URL)
-            .then()
-            .statusCode(HttpStatus.OK.value())
-            .extract()
-            .as(RidePageDto.class);
+    Response response = restAssured.getAllRides(adminAccessToken);
 
+    RidePageDto actual =
+        response.then().statusCode(HttpStatus.OK.value()).extract().as(RidePageDto.class);
     assertEquals(COUNT_EXISTED_ENTITY, actual.getRideDtoList().size());
   }
 
   @Test
   void deleteRideByIdIfExist() {
-    given()
-        .auth()
-        .oauth2(adminAccessToken)
-        .pathParam("id", EXIST_RIDE_ID)
-        .when()
-        .delete(RIDE_URL + ID_VARIABLE)
-        .then()
-        .statusCode(HttpStatus.NO_CONTENT.value());
+    Response response = restAssured.deleteRideByIdIfExist(adminAccessToken);
+
     long actualCountRidesAfterDeleting =
         StreamSupport.stream(rideRepository.findAll().spliterator(), false).count();
 
+    response.then().statusCode(HttpStatus.NO_CONTENT.value());
     assertEquals(COUNT_EXISTED_ENTITY - 1, actualCountRidesAfterDeleting);
   }
 
   @Test
   void deleteRideByIdIfNotExist() {
-    given()
-        .auth()
-        .oauth2(adminAccessToken)
-        .pathParam("id", NOT_EXIST_ID)
-        .when()
-        .delete(RIDE_URL + ID_VARIABLE)
-        .then()
-        .statusCode(HttpStatus.NOT_FOUND.value());
+    Response response = restAssured.deleteRideByIdIfNotExist(adminAccessToken);
     long actualCountRidesAfterDeleting =
         StreamSupport.stream(rideRepository.findAll().spliterator(), false).count();
 
+    response.then().statusCode(HttpStatus.NOT_FOUND.value());
     assertEquals(COUNT_EXISTED_ENTITY, actualCountRidesAfterDeleting);
   }
 
@@ -264,33 +233,29 @@ class RideControllerIT extends IntegrationTestEnvironment {
   void updateRideByIdIfExist() throws JsonProcessingException {
     rideDtoCorrect.setStatus(Status.PENDING);
     rideDtoCorrect.setId(EXIST_RIDE_ID);
-    given()
-        .auth()
-        .oauth2(adminAccessToken)
-        .pathParam("id", EXIST_RIDE_ID)
-        .contentType(ContentType.JSON)
-        .body(objectMapper.writeValueAsString(rideDtoCorrect))
-        .when()
-        .put(RIDE_URL + ID_VARIABLE)
-        .then()
-        .statusCode(HttpStatus.NO_CONTENT.value());
-    RideDto actual = rideService.getById(EXIST_DRIVER_ID);
+    rideDtoCorrect.setCarDto(carDto);
 
+    MockResponse responseGetDriverWithCarDto =
+        new MockResponse()
+            .setResponseCode(HttpStatus.OK.value())
+            .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .setBody(objectMapper.writeValueAsString(driverWithCarDto));
+    mockWebServer.enqueue(responseGetDriverWithCarDto);
+
+    Response response =
+        restAssured.updateRideByIdIfExist(adminAccessToken, rideDtoCorrect, objectMapper);
+    RideDto actual = restAssured.getRideIdIfExist(adminAccessToken).as(RideDto.class);
+
+    response.then().statusCode(HttpStatus.NO_CONTENT.value());
     assertEquals(rideDtoCorrect, actual);
   }
 
   @Test
   void updateRideByIdIfNotExist() throws JsonProcessingException {
-    given()
-        .auth()
-        .oauth2(adminAccessToken)
-        .pathParam("id", NOT_EXIST_ID)
-        .contentType(ContentType.JSON)
-        .body(objectMapper.writeValueAsString(rideDtoCorrect))
-        .when()
-        .put(RIDE_URL + ID_VARIABLE)
-        .then()
-        .statusCode(HttpStatus.NOT_FOUND.value());
+    Response response =
+        restAssured.updateRideByIdIfNotExist(adminAccessToken, rideDtoCorrect, objectMapper);
+
+    response.then().statusCode(HttpStatus.NOT_FOUND.value());
   }
 
   @Test
@@ -299,38 +264,23 @@ class RideControllerIT extends IntegrationTestEnvironment {
         new MockResponse().setResponseCode(HttpStatus.NO_CONTENT.value());
     mockWebServer.enqueue(responseUpdateDriverRatingAfterFinishRide);
 
-    given()
-        .auth()
-        .oauth2(adminAccessToken)
-        .pathParam("id", EXIST_RIDE_ID)
-        .pathParam("driverRating", RATING_AFTER_RIDE)
-        .when()
-        .put(RIDE_URL + ID_VARIABLE + DRIVER_RATING_URL)
-        .then()
-        .statusCode(HttpStatus.NO_CONTENT.value());
+    Response response = restAssured.updateDriverRatingAfterFinishRideIfExist(adminAccessToken);
+
+    response.then().statusCode(HttpStatus.NO_CONTENT.value());
   }
 
   @Test
   void updateDriverRatingAfterFinishRideIfNotExist() {
-    given()
-        .auth()
-        .oauth2(adminAccessToken)
-        .pathParam("id", NOT_EXIST_ID)
-        .pathParam("driverRating", RATING_AFTER_RIDE)
-        .when()
-        .put(RIDE_URL + ID_VARIABLE + DRIVER_RATING_URL)
-        .then()
-        .statusCode(HttpStatus.NOT_FOUND.value());
+    Response response = restAssured.updateDriverRatingAfterFinishRideIfNotExist(adminAccessToken);
+
+    response.then().statusCode(HttpStatus.NOT_FOUND.value());
   }
 
   @Test
   void cancelByPassengerIfRideExistAndStatusPending() {
-    given()
-        .auth()
-        .oauth2(adminAccessToken)
-        .pathParam("id", EXIST_SECOND_RIDE_ID)
-        .when()
-        .put(RIDE_URL + ID_VARIABLE + CANCEL_RIDE_BY_PASSENGER_URL)
+    Response response = restAssured.cancelByPassengerIfRideExistAndStatusPending(adminAccessToken);
+
+    response
         .then()
         .statusCode(HttpStatus.CREATED.value())
         .and()
@@ -340,28 +290,20 @@ class RideControllerIT extends IntegrationTestEnvironment {
 
   @Test
   void cancelByPassengerIfRideNotExist() {
-    given()
-        .auth()
-        .oauth2(adminAccessToken)
-        .pathParam("id", NOT_EXIST_ID)
-        .when()
-        .put(RIDE_URL + ID_VARIABLE + CANCEL_RIDE_BY_PASSENGER_URL)
-        .then()
-        .statusCode(HttpStatus.NOT_FOUND.value());
+    Response response = restAssured.cancelByPassengerIfRideNotExist(adminAccessToken);
+
+    response.then().statusCode(HttpStatus.NOT_FOUND.value());
   }
 
   @Test
   @Sql(value = "classpath:db/change-ride-status-to-active.sql")
   @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
   void cancelByPassengerIfRideExistAndStatusActiveThenReturnStatusBadRequest() {
-    given()
-        .auth()
-        .oauth2(adminAccessToken)
-        .pathParam("id", EXIST_SECOND_RIDE_ID)
-        .when()
-        .put(RIDE_URL + ID_VARIABLE + CANCEL_RIDE_BY_PASSENGER_URL)
-        .then()
-        .statusCode(HttpStatus.BAD_REQUEST.value());
+    Response response =
+        restAssured.cancelByPassengerIfRideExistAndStatusActiveThenReturnStatusBadRequest(
+            adminAccessToken);
+
+    response.then().statusCode(HttpStatus.BAD_REQUEST.value());
   }
 
   @Test
@@ -376,16 +318,11 @@ class RideControllerIT extends IntegrationTestEnvironment {
         new MockResponse().setResponseCode(HttpStatus.NO_CONTENT.value());
     mockWebServer.enqueue(responseUpdateDriverAvailabilityToTrueAfterRide);
 
-    given()
-        .auth()
-        .oauth2(adminAccessToken)
-        .pathParam("id", EXIST_RIDE_ID)
-        .contentType(ContentType.JSON)
-        .body(objectMapper.writeValueAsString(passengerRatingFinishDto))
-        .when()
-        .put(RIDE_URL + ID_VARIABLE + FINISH_RIDE_BY_DRIVER_URL)
-        .then()
-        .statusCode(HttpStatus.NO_CONTENT.value());
+    Response response =
+        restAssured.finishByDriverIfRideExist(
+            adminAccessToken, objectMapper, passengerRatingFinishDto);
+
+    response.then().statusCode(HttpStatus.NO_CONTENT.value());
   }
 
   @Test
@@ -393,16 +330,11 @@ class RideControllerIT extends IntegrationTestEnvironment {
     PassengerRatingFinishDto passengerRatingFinishDto = new PassengerRatingFinishDto();
     passengerRatingFinishDto.setPassengerRating(RATING_AFTER_RIDE);
 
-    given()
-        .auth()
-        .oauth2(adminAccessToken)
-        .pathParam("id", NOT_EXIST_ID)
-        .contentType(ContentType.JSON)
-        .body(objectMapper.writeValueAsString(passengerRatingFinishDto))
-        .when()
-        .put(RIDE_URL + ID_VARIABLE + FINISH_RIDE_BY_DRIVER_URL)
-        .then()
-        .statusCode(HttpStatus.NOT_FOUND.value());
+    Response response =
+        restAssured.finishByDriverIfRideNotExist(
+            adminAccessToken, objectMapper, passengerRatingFinishDto);
+
+    response.then().statusCode(HttpStatus.NOT_FOUND.value());
   }
 
   @Test
@@ -428,18 +360,10 @@ class RideControllerIT extends IntegrationTestEnvironment {
     rideDtoCorrect.setPassengerId(PASSENGER_ID_WITH_NO_ACTIVE_RIDE);
     RideSearchDto expected = RideSearchDto.builder().rideId(NEXT_RIDE_ID).build();
 
+    Response response = restAssured.orderRide(adminAccessToken, objectMapper, rideDtoCorrect);
+
     RideDto actualRideDto =
-        given()
-            .auth()
-            .oauth2(adminAccessToken)
-            .contentType(ContentType.JSON)
-            .body(objectMapper.writeValueAsString(rideDtoCorrect))
-            .when()
-            .post(RIDE_URL)
-            .then()
-            .statusCode(HttpStatus.CREATED.value())
-            .extract()
-            .as(RideDto.class);
+        response.then().statusCode(HttpStatus.CREATED.value()).extract().as(RideDto.class);
     Status actual = actualRideDto.getStatus();
 
     testConsumer.subscribe(List.of(KAFKA_ORDER_RIDE_TOPIC));
@@ -464,18 +388,10 @@ class RideControllerIT extends IntegrationTestEnvironment {
 
     mockWebServer.enqueue(responseNotFoundPassengerById);
 
+    Response response = restAssured.orderRide(adminAccessToken, objectMapper, rideDtoCorrect);
+
     Response actualResponse =
-        given()
-            .auth()
-            .oauth2(adminAccessToken)
-            .contentType(ContentType.JSON)
-            .body(objectMapper.writeValueAsString(rideDtoCorrect))
-            .when()
-            .post(RIDE_URL)
-            .then()
-            .statusCode(HttpStatus.NOT_FOUND.value())
-            .extract()
-            .response();
+        response.then().statusCode(HttpStatus.NOT_FOUND.value()).extract().response();
     String actual = actualResponse.getBody().asString();
 
     assertEquals(PASSENGER_NOT_FOUND_EXCEPTION_MESSAGE + PASSENGER_ID_WITH_NO_ACTIVE_RIDE, actual);
@@ -495,18 +411,10 @@ class RideControllerIT extends IntegrationTestEnvironment {
 
     mockWebServer.enqueue(responseFindPassengerByIdWithEmptyBankCardList);
 
+    Response response = restAssured.orderRide(adminAccessToken, objectMapper, rideDtoCorrect);
+
     Response actualResponse =
-        given()
-            .auth()
-            .oauth2(adminAccessToken)
-            .contentType(ContentType.JSON)
-            .body(objectMapper.writeValueAsString(rideDtoCorrect))
-            .when()
-            .post(RIDE_URL)
-            .then()
-            .statusCode(HttpStatus.NOT_FOUND.value())
-            .extract()
-            .response();
+        response.then().statusCode(HttpStatus.NOT_FOUND.value()).extract().response();
     String actual = actualResponse.getBody().asString();
 
     assertEquals(
@@ -534,18 +442,10 @@ class RideControllerIT extends IntegrationTestEnvironment {
 
     mockWebServer.enqueue(responseFindPassengerByIdWithNotEnoughMoneyOnBankCard);
 
+    Response response = restAssured.orderRide(adminAccessToken, objectMapper, rideDtoCorrect);
+
     Response actualResponse =
-        given()
-            .auth()
-            .oauth2(adminAccessToken)
-            .contentType(ContentType.JSON)
-            .body(objectMapper.writeValueAsString(rideDtoCorrect))
-            .when()
-            .post(RIDE_URL)
-            .then()
-            .statusCode(HttpStatus.BAD_REQUEST.value())
-            .extract()
-            .response();
+        response.then().statusCode(HttpStatus.BAD_REQUEST.value()).extract().response();
     String actual = actualResponse.getBody().asString();
 
     assertEquals(PASSENGER_BANK_CARD_NOT_ENOUGH_MONEY_EXCEPTION_MESSAGE, actual);
@@ -555,18 +455,10 @@ class RideControllerIT extends IntegrationTestEnvironment {
   void orderRideWhenPassengerHaveUnfinishedRide() throws JsonProcessingException {
     rideDtoCorrect.setPassengerId(EXIST_PASSENGER_ID);
 
+    Response response = restAssured.orderRide(adminAccessToken, objectMapper, rideDtoCorrect);
+
     Response actualResponse =
-        given()
-            .auth()
-            .oauth2(adminAccessToken)
-            .contentType(ContentType.JSON)
-            .body(objectMapper.writeValueAsString(rideDtoCorrect))
-            .when()
-            .post(RIDE_URL)
-            .then()
-            .statusCode(HttpStatus.BAD_REQUEST.value())
-            .extract()
-            .response();
+        response.then().statusCode(HttpStatus.BAD_REQUEST.value()).extract().response();
     String actual = actualResponse.getBody().asString();
 
     assertEquals(PASSENGER_HAVE_UNFINISHED_RIDE_EXCEPTION_MESSAGE, actual);
@@ -620,13 +512,8 @@ class RideControllerIT extends IntegrationTestEnvironment {
 
   @SneakyThrows
   private Response getResponse() {
-    return given()
-        .auth()
-        .oauth2(adminAccessToken)
-        .contentType(ContentType.JSON)
-        .body(objectMapper.writeValueAsString(rideDtoCorrect))
-        .when()
-        .post(RIDE_URL)
+    return restAssured
+        .orderRide(adminAccessToken, objectMapper, rideDtoCorrect)
         .then()
         .extract()
         .response();
@@ -634,50 +521,33 @@ class RideControllerIT extends IntegrationTestEnvironment {
 
   @Test
   void couldNotDeleteRideByPassengerRole() {
-    given()
-        .auth()
-        .oauth2(passengerAccessToken)
-        .pathParam("id", EXIST_RIDE_ID)
-        .when()
-        .delete(RIDE_URL + ID_VARIABLE)
+    restAssured
+        .deleteRideByIdIfExist(passengerAccessToken)
         .then()
         .statusCode(HttpStatus.FORBIDDEN.value());
   }
 
   @Test
   void couldNotOrderRideByDriverRole() throws JsonProcessingException {
-    given()
-        .auth()
-        .oauth2(driverAccessToken)
-        .contentType(ContentType.JSON)
-        .body(objectMapper.writeValueAsString(rideDtoCorrect))
-        .when()
-        .post(RIDE_URL)
+    restAssured
+        .orderRide(driverAccessToken, objectMapper, rideDtoCorrect)
         .then()
         .statusCode(HttpStatus.FORBIDDEN.value());
   }
 
   @Test
   void couldNotOrderRideWithoutAccessToken() throws JsonProcessingException {
-    given()
-        .contentType(ContentType.JSON)
-        .body(objectMapper.writeValueAsString(rideDtoCorrect))
-        .when()
-        .post(RIDE_URL)
+    restAssured
+        .orderRideWithoutAccessToken(objectMapper, rideDtoCorrect)
         .then()
         .statusCode(HttpStatus.UNAUTHORIZED.value());
   }
 
   @Test
   void couldNotOrderRideWithIncorrectAccessToken() throws JsonProcessingException {
-    given()
-            .auth()
-            .oauth2("123")
-            .contentType(ContentType.JSON)
-            .body(objectMapper.writeValueAsString(rideDtoCorrect))
-            .when()
-            .post(RIDE_URL)
-            .then()
-            .statusCode(HttpStatus.UNAUTHORIZED.value());
+    restAssured
+        .orderRide("incorrect token value", objectMapper, rideDtoCorrect)
+        .then()
+        .statusCode(HttpStatus.UNAUTHORIZED.value());
   }
 }

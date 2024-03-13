@@ -6,6 +6,7 @@ import com.modsen.rideservice.dto.DriverWithCarDto;
 import com.modsen.rideservice.dto.IdPageDto;
 import com.modsen.rideservice.exception.ServerUnavailableException;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -15,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+
 import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -30,6 +32,8 @@ public class DriverServiceWebClient {
   public static final String HEADER_AUTHORIZATION = "Authorization";
 
   private final WebClient webClient;
+  @Value("${webclient.timeout.duration}")
+  private long timeOutDuration;
 
   public DriverServiceWebClient(@Qualifier("driverWebClient") WebClient webClient) {
     this.webClient = webClient;
@@ -56,7 +60,7 @@ public class DriverServiceWebClient {
             HttpStatus::is5xxServerError,
             error -> error(new ServerUnavailableException(SERVER_UNAVAILABLE_EXCEPTION_MESSAGE)))
         .toEntity(DriverPageDto.class)
-        .timeout(Duration.ofMinutes(1))
+        .timeout(Duration.ofMinutes(timeOutDuration))
         .block();
   }
 
@@ -76,7 +80,7 @@ public class DriverServiceWebClient {
             HttpStatus::is5xxServerError,
             error -> error(new ServerUnavailableException(SERVER_UNAVAILABLE_EXCEPTION_MESSAGE)))
         .toEntity(Void.class)
-        .timeout(Duration.ofMinutes(1))
+        .timeout(Duration.ofMinutes(timeOutDuration))
         .block();
   }
 
@@ -97,7 +101,7 @@ public class DriverServiceWebClient {
             HttpStatus::is5xxServerError,
             error -> error(new ServerUnavailableException(SERVER_UNAVAILABLE_EXCEPTION_MESSAGE)))
         .toEntity(Void.class)
-        .timeout(Duration.ofMinutes(1))
+        .timeout(Duration.ofMinutes(timeOutDuration))
         .block();
   }
 
@@ -117,7 +121,7 @@ public class DriverServiceWebClient {
             HttpStatus::is5xxServerError,
             error -> error(new ServerUnavailableException(SERVER_UNAVAILABLE_EXCEPTION_MESSAGE)))
         .toEntity(DriverWithCarDto.class)
-        .timeout(Duration.ofMinutes(1))
+        .timeout(Duration.ofMinutes(timeOutDuration))
         .block();
   }
 

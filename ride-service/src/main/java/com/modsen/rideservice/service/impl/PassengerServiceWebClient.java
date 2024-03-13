@@ -5,6 +5,7 @@ import com.modsen.rideservice.dto.PassengerDto;
 import com.modsen.rideservice.exception.ServerUnavailableException;
 import com.modsen.rideservice.model.Ride;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -26,6 +27,8 @@ public class PassengerServiceWebClient {
   public static final String HEADER_AUTHORIZATION = "Authorization";
 
   private final WebClient webClient;
+  @Value("${webclient.timeout.duration}")
+  private long timeOutDuration;
 
   public PassengerServiceWebClient(@Qualifier("passengerWebClient") WebClient webClient) {
     this.webClient = webClient;
@@ -47,7 +50,7 @@ public class PassengerServiceWebClient {
             HttpStatus::is5xxServerError,
             error -> error(new ServerUnavailableException("Passenger service is not responding")))
         .toEntity(PassengerDto.class)
-        .timeout(Duration.ofMinutes(1))
+        .timeout(Duration.ofMinutes(timeOutDuration))
         .block();
   }
 
@@ -76,7 +79,7 @@ public class PassengerServiceWebClient {
             HttpStatus::is5xxServerError,
             error -> error(new ServerUnavailableException("Passenger service is not responding")))
         .toEntity(Void.class)
-        .timeout(Duration.ofMinutes(1))
+        .timeout(Duration.ofMinutes(timeOutDuration))
         .block();
   }
 
