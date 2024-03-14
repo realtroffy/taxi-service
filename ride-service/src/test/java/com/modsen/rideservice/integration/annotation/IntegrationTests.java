@@ -1,9 +1,12 @@
 package com.modsen.rideservice.integration.annotation;
 
+import com.modsen.rideservice.integration.helper.AccessTokenProperties;
 import com.modsen.rideservice.integration.testenvironment.IntegrationTestEnvironment;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestConstructor;
+import org.springframework.test.context.TestPropertySource;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -19,4 +22,5 @@ import static org.springframework.test.context.TestConstructor.AutowireMode.ALL;
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     classes = IntegrationTestEnvironment.TestConfig.class)
 @TestConstructor(autowireMode = ALL)
+@EnableConfigurationProperties(value = AccessTokenProperties.class)
 public @interface IntegrationTests {}

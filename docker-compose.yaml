@@ -23,6 +23,39 @@ services:
     volumes:
       - kafka-data:/var/lib/kafka/data
 
+  keycloak:
+    image: jboss/keycloak
+    container_name: keycloak
+    restart: always
+    environment:
+      KEYCLOAK_VERSION: 6.0.1
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+    volumes:
+      - ./realm-export.json:/opt/jboss/keycloak/realm-export.json
+    command:
+      - "-b 0.0.0.0"
+      - "-Dkeycloak.import=/opt/jboss/keycloak/realm-export.json"
+      - "-Dkeycloak.profile.feature.scripts=enabled"
+      - "-Dkeycloak.profile.feature.upload_scripts=enabled"
+      - "-Djboss.http.port=8084"
+    ports:
+      - "8084:8084"
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis:/var/lib/redis
+      - redis-config:/usr/local/etc/redis/redis.conf
+    environment:
+      - REDIS_PASSWORD=password
+      - REDIS_PORT=6379
+
+
   postgres:
     image: 'postgres:13.1-alpine'
     ports:
@@ -174,3 +207,6 @@ volumes:
     driver: local
   esdata:
     driver: local
+  redis:
+  redis-config:
+
