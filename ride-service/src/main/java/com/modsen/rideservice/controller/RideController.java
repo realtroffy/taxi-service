@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.annotation.security.RolesAllowed;
 import javax.validation.Valid;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
@@ -33,11 +34,13 @@ public class RideController {
   private final RideService rideService;
 
   @PostMapping
+  @RolesAllowed({"PASSENGER", "ADMIN"})
   public ResponseEntity<RideDto> order(@RequestBody @Valid RideDto rideDto) {
     return ResponseEntity.status(CREATED).body(rideService.order(rideDto));
   }
 
   @PutMapping("{rideId}/finish")
+  @RolesAllowed({"DRIVER", "ADMIN"})
   public ResponseEntity<Void> finishByDriver(
       @PathVariable(name = "rideId") Long rideId,
       @RequestBody @Valid PassengerRatingFinishDto passengerRatingFinishDto) {
@@ -46,12 +49,14 @@ public class RideController {
   }
 
   @PutMapping("{rideId}/cancel")
+  @RolesAllowed({"PASSENGER", "ADMIN"})
   public ResponseEntity<RideDto> cancelByPassenger(@PathVariable(name = "rideId") Long rideId) {
     RideDto rideDto = rideService.cancelByPassenger(rideId);
     return ResponseEntity.status(CREATED).body(rideDto);
   }
 
   @PutMapping("{rideId}/{driverRating}")
+  @RolesAllowed({"PASSENGER", "ADMIN"})
   public ResponseEntity<Void> updateDriverRatingAfterFinishRide(
       @PathVariable(name = "rideId") Long rideId,
       @PathVariable(name = "driverRating") @Min(value = 0) @Max(value = 5) Integer driverRating) {

@@ -4,10 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.modsen.rideservice.dto.PromoCodeDto;
 import com.modsen.rideservice.dto.PromoCodePageDto;
+import com.modsen.rideservice.integration.controller.restassured.RestAssuredPromoCodeController;
+import com.modsen.rideservice.integration.helper.AccessTokenExtractor;
 import com.modsen.rideservice.integration.testenvironment.IntegrationTestEnvironment;
 import com.modsen.rideservice.repository.PromoCodeRepository;
 import com.modsen.rideservice.service.PromoCodeService;
-import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,18 +20,13 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.stream.StreamSupport;
 
-import static io.restassured.RestAssured.given;
 import static java.lang.String.format;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @RequiredArgsConstructor
 class PromoCodeControllerIT extends IntegrationTestEnvironment {
 
-  public static final String PROMO_CODE_URL = "/api/v1/promocodes";
-  public static final String ID_VARIABLE = "/{id}";
   public static final Long EXIST_PROMO_CODE_ID = 1L;
-  public static final Long EXIST_PROMO_CODE_ID_WITH_NO_RIDES = 2L;
   public static final Long NOT_EXIST_ID = 30L;
   public static final int COUNT_EXISTED_ENTITY = 2;
   public static final Long GENERATED_ID_AFTER_SAVE = 3L;
@@ -42,8 +38,14 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
   private final PromoCodeService promoCodeService;
   private final PromoCodeRepository promoCodeRepository;
   private final Jackson2ObjectMapperBuilder builder;
+  private final AccessTokenExtractor accessTokenExtractor;
+  private final RestAssuredPromoCodeController restAssured;
   private PromoCodeDto promoCodeDtoCorrect;
+  private PromoCodeDto savedInDbPromoCode;
   private ObjectMapper objectMapper;
+  private String adminAccessToken;
+  private String passengerAccessToken;
+  private String driverAccessToken;
 
   @BeforeEach
   @Override
@@ -58,41 +60,49 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
             .end(LocalDateTime.of(2024, 10, 10, 10, 10))
             .build();
 
+    savedInDbPromoCode =
+        PromoCodeDto.builder()
+            .name("SUPER50")
+            .id(EXIST_PROMO_CODE_ID)
+            .discount(BigDecimal.valueOf(0.5))
+            .start(LocalDateTime.of(2022, 1, 1, 10, 0))
+            .end(LocalDateTime.of(2024, 1, 1, 10, 0))
+            .build();
+
     objectMapper = builder.build();
+
+    adminAccessToken = accessTokenExtractor.getAdminAccessToken();
+    passengerAccessToken = accessTokenExtractor.getPassengerAccessToken();
+    driverAccessToken = accessTokenExtractor.getDriverAccessToken();
   }
 
   @Test
   void getPromoCodeByIdIfExist() {
-    given()
-        .pathParam("id", EXIST_PROMO_CODE_ID)
-        .when()
-        .get(PROMO_CODE_URL + ID_VARIABLE)
-        .then()
-        .statusCode(HttpStatus.OK.value())
-        .and()
-        .body("id", equalTo(EXIST_PROMO_CODE_ID.intValue()))
-        .body("name", equalTo("SUPER50"))
-        .body("discount", equalTo(0.5f))
-        .body("start", equalTo("2022-01-01T10:00:00"))
-        .body("end", equalTo("2024-01-01T10:00:00"));
+    PromoCodeDto actual =
+        restAssured
+            .getPromoCodeByIdIfExist(adminAccessToken)
+            .then()
+            .statusCode(HttpStatus.OK.value())
+            .and()
+            .extract()
+            .as(PromoCodeDto.class);
+
+    assertEquals(savedInDbPromoCode, actual);
   }
 
   @Test
   void getPromoCodeByIdIfNotExist() {
-    given()
-        .pathParam("id", NOT_EXIST_ID)
-        .when()
-        .get(PROMO_CODE_URL + ID_VARIABLE)
+    restAssured
+        .getPromoCodeByIdIfNotExist(adminAccessToken)
         .then()
         .statusCode(HttpStatus.NOT_FOUND.value());
   }
 
   @Test
-  void getAllDrivers() {
+  void getAllPromocodes() {
     PromoCodePageDto actualPromoCodePageDto =
-        given()
-            .when()
-            .get(PROMO_CODE_URL)
+        restAssured
+            .getAllPromocodes(adminAccessToken)
             .then()
             .statusCode(HttpStatus.OK.value())
             .extract()
@@ -103,13 +113,10 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
   }
 
   @Test
-  void saveDriverIfDtoCorrect() throws JsonProcessingException {
+  void savePromoCodeIfDtoCorrect() throws JsonProcessingException {
     PromoCodeDto actual =
-        given()
-            .contentType(ContentType.JSON)
-            .body(objectMapper.writeValueAsString(promoCodeDtoCorrect))
-            .when()
-            .post(PROMO_CODE_URL)
+        restAssured
+            .savePromoCodeIfDtoCorrect(adminAccessToken, objectMapper, promoCodeDtoCorrect)
             .then()
             .statusCode(HttpStatus.CREATED.value())
             .extract()
@@ -120,14 +127,10 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
   }
 
   @Test
-  void updateDriverByIdIfExist() throws JsonProcessingException {
+  void updatePromoCodeByIdIfExist() throws JsonProcessingException {
     promoCodeDtoCorrect.setId(EXIST_PROMO_CODE_ID);
-    given()
-        .pathParam("id", EXIST_PROMO_CODE_ID)
-        .contentType(ContentType.JSON)
-        .body(objectMapper.writeValueAsString(promoCodeDtoCorrect))
-        .when()
-        .put(PROMO_CODE_URL + ID_VARIABLE)
+    restAssured
+        .updatePromoCodeByIdIfExist(adminAccessToken, objectMapper, promoCodeDtoCorrect)
         .then()
         .statusCode(HttpStatus.NO_CONTENT.value());
     PromoCodeDto actual = promoCodeService.getById(EXIST_PROMO_CODE_ID);
@@ -138,22 +141,16 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
   @Test
   void updatePromoCodeByIdIfNotExist() throws JsonProcessingException {
     promoCodeDtoCorrect.setId(NOT_EXIST_ID);
-    given()
-        .pathParam("id", NOT_EXIST_ID)
-        .contentType(ContentType.JSON)
-        .body(objectMapper.writeValueAsString(promoCodeDtoCorrect))
-        .when()
-        .put(PROMO_CODE_URL + ID_VARIABLE)
+    restAssured
+        .updatePromoCodeByIdIfNotExist(adminAccessToken, objectMapper, promoCodeDtoCorrect)
         .then()
         .statusCode(HttpStatus.NOT_FOUND.value());
   }
 
   @Test
   void deletePromoCodeByIdIfExist() {
-    given()
-        .pathParam("id", EXIST_PROMO_CODE_ID_WITH_NO_RIDES)
-        .when()
-        .delete(PROMO_CODE_URL + ID_VARIABLE)
+    restAssured
+        .deletePromoCodeByIdIfExist(adminAccessToken)
         .then()
         .statusCode(HttpStatus.NO_CONTENT.value());
     long actualCountPromoCodesAfterDeleting =
@@ -164,10 +161,8 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
 
   @Test
   void deletePromoCodesByIdIfNotExist() {
-    given()
-        .pathParam("id", NOT_EXIST_ID)
-        .when()
-        .delete(PROMO_CODE_URL + ID_VARIABLE)
+    restAssured
+        .deletePromoCodesByIdIfNotExist(adminAccessToken)
         .then()
         .statusCode(HttpStatus.NOT_FOUND.value());
     long actualCountDriversAfterDeleting =
@@ -181,17 +176,16 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
       throws JsonProcessingException {
     promoCodeDtoCorrect.setId(EXIST_PROMO_CODE_ID);
     promoCodeDtoCorrect.setEnd(FINISH_DATE_BEFORE_START_DATE);
+
     Response actualResponse =
-        given()
-            .pathParam("id", EXIST_PROMO_CODE_ID)
-            .contentType(ContentType.JSON)
-            .body(objectMapper.writeValueAsString(promoCodeDtoCorrect))
-            .when()
-            .put(PROMO_CODE_URL + ID_VARIABLE)
+        restAssured
+            .updatePromoCodeByIdIfExistAndIfStartDateAfterFinishDateThanThrowException(
+                adminAccessToken, objectMapper, promoCodeDtoCorrect)
             .then()
             .statusCode(HttpStatus.BAD_REQUEST.value())
             .extract()
             .response();
+
     String actual = actualResponse.getBody().asString();
     String expected =
         format(
@@ -200,5 +194,21 @@ class PromoCodeControllerIT extends IntegrationTestEnvironment {
             FINISH_DATE_BEFORE_START_DATE);
 
     assertEquals(expected, actual);
+  }
+
+  @Test
+  void couldNotGetAllPromocodesWithPassengerRole() {
+    restAssured
+        .couldNotGetAllPromocodesWithPassengerRole(passengerAccessToken)
+        .then()
+        .statusCode(HttpStatus.FORBIDDEN.value());
+  }
+
+  @Test
+  void couldNotGetAllPromocodesWithDriverRole() {
+    restAssured
+        .couldNotGetAllPromocodesWithDriverRole(driverAccessToken)
+        .then()
+        .statusCode(HttpStatus.FORBIDDEN.value());
   }
 }
