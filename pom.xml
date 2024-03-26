@@ -54,6 +54,7 @@
         <spring.session.data.redis>2.7.4</spring.session.data.redis>
         <testcontainers.keycloak.version>2.6.0</testcontainers.keycloak.version>
         <testcontainers.version>1.19.3</testcontainers.version>
+        <spring.cloud.starter.openfeign.version>3.1.4</spring.cloud.starter.openfeign.version>
     </properties>
 
     <dependencyManagement>
@@ -122,6 +123,11 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-sleuth-zipkin</artifactId>
             <version>${spring.cloud.starter.sleuth.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-starter-openfeign</artifactId>
+                <version>${spring.cloud.starter.openfeign.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
@@ -258,6 +264,8 @@
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-webflux-ui</artifactId>
                 <version>1.7.0</version>
+            </dependency>
+            <dependency>
                 <groupId>com.github.dasniko</groupId>
                 <artifactId>testcontainers-keycloak</artifactId>
                 <version>${testcontainers.keycloak.version}</version>

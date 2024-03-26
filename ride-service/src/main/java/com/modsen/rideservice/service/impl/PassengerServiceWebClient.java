@@ -10,11 +10,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+
 import java.time.Duration;
 import java.util.NoSuchElementException;
 
@@ -23,10 +21,8 @@ import static reactor.core.publisher.Mono.error;
 @Component
 public class PassengerServiceWebClient {
 
-  public static final String PREFIX_BEARER = "Bearer ";
-  public static final String HEADER_AUTHORIZATION = "Authorization";
-
   private final WebClient webClient;
+
   @Value("${webclient.timeout.duration}")
   private long timeOutDuration;
 
@@ -38,7 +34,6 @@ public class PassengerServiceWebClient {
     return webClient
         .get()
         .uri("/" + passengerId)
-        .header(HEADER_AUTHORIZATION, PREFIX_BEARER + getJwt())
         .retrieve()
         .onStatus(
             HttpStatus::is4xxClientError,
@@ -66,7 +61,6 @@ public class PassengerServiceWebClient {
         .put()
         .uri("/after-ride/" + ride.getPassengerId())
         .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-        .header(HEADER_AUTHORIZATION, PREFIX_BEARER + getJwt())
         .bodyValue(passengerAfterRideDto)
         .retrieve()
         .onStatus(
@@ -81,11 +75,5 @@ public class PassengerServiceWebClient {
         .toEntity(Void.class)
         .timeout(Duration.ofMinutes(timeOutDuration))
         .block();
-  }
-
-  private String getJwt() {
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    Jwt jwt = (Jwt) authentication.getPrincipal();
-    return jwt.getTokenValue();
   }
 }
