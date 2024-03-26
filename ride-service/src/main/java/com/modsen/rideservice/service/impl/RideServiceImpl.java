@@ -20,6 +20,7 @@ import com.modsen.rideservice.model.PromoCode;
 import com.modsen.rideservice.model.Ride;
 import com.modsen.rideservice.model.Status;
 import com.modsen.rideservice.repository.RideRepository;
+import com.modsen.rideservice.service.DriverServiceFeignClient;
 import com.modsen.rideservice.service.PromoCodeService;
 import com.modsen.rideservice.service.RideService;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -61,6 +62,7 @@ public class RideServiceImpl implements RideService {
   private final PromoCodeService promoCodeService;
   private final RideMapper rideMapper;
   private final MessageChannel toKafkaChannel;
+  private final DriverServiceFeignClient driverServiceFeignClient;
   @PersistenceContext private final EntityManager entityManager;
 
   @Value(value = "${spring.kafka.topic-order-new-ride}")
@@ -183,7 +185,7 @@ public class RideServiceImpl implements RideService {
     CarDto carDto = null;
     if (ride.getDriverId() != null) {
       try {
-        carDto = driverServiceWebClient.getDriverById(ride.getDriverId()).getBody().getCarDto();
+        carDto = driverServiceFeignClient.getById(ride.getDriverId()).getBody().getCarDto();
       } catch (NullPointerException exception) {
         throw new DriverServiceException(
             "Driver service return null body or driver without car. May be driver or his car was deleted");
@@ -300,9 +302,9 @@ public class RideServiceImpl implements RideService {
 
   private List<RideDto> getAllRidesWithoutDriver(Pageable pageable) {
     return rideRepository.findAll(pageable).getContent().stream()
-            .filter(ride -> ride.getDriverId() == null)
-            .map(rideMapper::toDto)
-            .collect(Collectors.toList());
+        .filter(ride -> ride.getDriverId() == null)
+        .map(rideMapper::toDto)
+        .collect(Collectors.toList());
   }
 
   private List<RideDto> getAllRidesWithDriver(Pageable pageable) {
